@@ -12,17 +12,53 @@ serve(async (req) => {
   }
 
   try {
-    const { citySlug } = await req.json();
-    console.log("Processing request for city:", citySlug);
-
-    if (!citySlug) {
-      throw new Error("City slug is required");
+    // Check if request has a body
+    const hasBody = req.headers.get("content-length") !== "0" && req.headers.get("content-type")?.includes("application/json");
+    
+    let citySlug;
+    if (hasBody) {
+      const body = await req.json();
+      citySlug = body.citySlug;
     }
+
+    console.log("Processing request for city:", citySlug);
 
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // If no citySlug provided, return website context
+    if (!citySlug) {
+      return new Response(
+        JSON.stringify({
+          websiteContext: "Entdecke mit Singlebörsen-aktuell.de tolle Singles in deiner Nähe!",
+          cityCards: [
+            {
+              title: "Singles in Berlin",
+              description: "Entdecke die vielfältige Dating-Szene Berlins",
+              bundesland: "Berlin",
+              link: "/berlin"
+            },
+            {
+              title: "Singles in Hamburg",
+              description: "Finde deinen Partner in der Hansestadt",
+              bundesland: "Hamburg",
+              link: "/hamburg"
+            },
+            {
+              title: "Singles in München",
+              description: "Dating in der bayerischen Hauptstadt",
+              bundesland: "Bayern",
+              link: "/muenchen"
+            }
+          ]
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
 
     // Check if city exists
     const { data: cityData, error: cityError } = await supabase
