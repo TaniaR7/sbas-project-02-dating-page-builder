@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://lokal.singleboersen-aktuell.de/sitemap.xml
