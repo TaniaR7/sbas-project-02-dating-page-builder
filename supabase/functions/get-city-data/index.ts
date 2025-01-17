@@ -15,6 +15,10 @@ serve(async (req) => {
     const { citySlug } = await req.json();
     console.log("Processing request for city:", citySlug);
 
+    if (!citySlug) {
+      throw new Error("City slug is required");
+    }
+
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_ANON_KEY")!;
@@ -78,16 +82,32 @@ serve(async (req) => {
           { role: "system", content: "You are a helpful assistant that generates content for dating websites in German language." },
           { role: "user", content: prompt }
         ],
+        temperature: 0.7,
+        max_tokens: 2000,
       }),
     });
 
     if (!gptResponse.ok) {
-      console.error("OpenAI API error:", await gptResponse.text());
-      throw new Error("Failed to generate content");
+      const errorText = await gptResponse.text();
+      console.error("OpenAI API error:", errorText);
+      throw new Error(`Failed to generate content: ${errorText}`);
     }
 
     const gptData = await gptResponse.json();
-    const generatedContent = JSON.parse(gptData.choices[0].message.content);
+    console.log("Raw GPT response:", JSON.stringify(gptData));
+
+    if (!gptData.choices?.[0]?.message?.content) {
+      throw new Error("Invalid response from OpenAI API");
+    }
+
+    let generatedContent;
+    try {
+      generatedContent = JSON.parse(gptData.choices[0].message.content);
+    } catch (parseError) {
+      console.error("Failed to parse GPT response:", parseError);
+      console.log("Raw content:", gptData.choices[0].message.content);
+      throw new Error("Failed to parse generated content");
+    }
 
     // Get images from Pixabay
     console.log("Fetching images from Pixabay");
@@ -96,7 +116,8 @@ serve(async (req) => {
     );
 
     if (!pixabayResponse.ok) {
-      console.error("Pixabay API error:", await pixabayResponse.text());
+      const errorText = await pixabayResponse.text();
+      console.error("Pixabay API error:", errorText);
       throw new Error("Failed to fetch images");
     }
 
@@ -148,7 +169,11 @@ serve(async (req) => {
   } catch (error) {
     console.error("Error:", error);
     return new Response(
-      JSON.stringify({ error: "An unexpected error occurred", details: error.message }),
+      JSON.stringify({ 
+        error: "An unexpected error occurred", 
+        details: error.message,
+        stack: error.stack 
+      }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 500,
