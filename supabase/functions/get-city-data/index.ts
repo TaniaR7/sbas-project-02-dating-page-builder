@@ -8,10 +8,50 @@ const corsHeaders = {
 }
 
 const websiteContext = `// ... keep existing code`
-
 const contentOutline = `// ... keep existing code`
-
 const singleboersen = `// ... keep existing code`
+
+async function generateSitemap() {
+  const supabase = createClient(
+    Deno.env.get('SUPABASE_URL') ?? '',
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+  );
+
+  const { data: cities, error } = await supabase
+    .from('cities')
+    .select('slug')
+    .order('name');
+
+  if (error) {
+    console.error('Error fetching cities:', error);
+    throw error;
+  }
+
+  const currentDate = new Date().toISOString().split('T')[0];
+  const baseUrl = 'https://lokal.singleboersen-aktuell.de';
+
+  let sitemap = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>${baseUrl}</loc>
+    <lastmod>${currentDate}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>1.0</priority>
+  </url>`;
+
+  for (const city of cities) {
+    sitemap += `
+  <url>
+    <loc>${baseUrl}/singles/${city.slug}</loc>
+    <lastmod>${currentDate}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>`;
+  }
+
+  sitemap += '\n</urlset>';
+  return sitemap;
+}
 
 async function generateSectionContent(city: string, section: number, contentOutline: string) {
   let prompt = '';
@@ -212,15 +252,28 @@ serve(async (req) => {
   try {
     const url = new URL(req.url);
     const path = url.pathname;
-    const citySlug = path.match(/\/singles\/([^\/]+)/)?.[1];
 
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
+    // Handle sitemap.xml request
+    if (path === '/sitemap.xml') {
+      const sitemap = await generateSitemap();
+      return new Response(sitemap, { 
+        headers: { 
+          ...corsHeaders, 
+          'Content-Type': 'application/xml',
+          'Cache-Control': 'public, max-age=86400' // Cache for 24 hours
+        },
+        status: 200 
+      });
+    }
 
     // Check if this is a city subpage request
+    const citySlug = path.match(/\/singles\/([^\/]+)/)?.[1];
     if (citySlug) {
+      const supabase = createClient(
+        Deno.env.get('SUPABASE_URL') ?? '',
+        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      );
+
       const { data: cityData } = await supabase
         .from('cities')
         .select('*')
