@@ -6,13 +6,11 @@ const PIXABAY_API_KEY = Deno.env.get("PIXABAY_API_KEY");
 const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
   try {
-    // Check if request has a body
     const hasBody = req.headers.get("content-length") !== "0" && req.headers.get("content-type")?.includes("application/json");
     
     let citySlug;
@@ -23,36 +21,51 @@ serve(async (req) => {
 
     console.log("Processing request for city:", citySlug);
 
-    // Initialize Supabase client
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // If no citySlug provided, return website context
     if (!citySlug) {
+      const { data: cities, error: citiesError } = await supabase
+        .from("cities")
+        .select("name, bundesland, slug")
+        .limit(6);
+
+      if (citiesError) {
+        console.error("Error fetching cities:", citiesError);
+        throw new Error("Failed to fetch cities");
+      }
+
+      const cityCards = cities?.map(city => ({
+        title: `Singles in ${city.name}`,
+        description: `Entdecke die Dating-Szene in ${city.name}`,
+        bundesland: city.bundesland,
+        link: `/singles/${city.slug}`
+      })) || [
+        {
+          title: "Singles in Berlin",
+          description: "Entdecke die vielfältige Dating-Szene Berlins",
+          bundesland: "Berlin",
+          link: "/singles/berlin"
+        },
+        {
+          title: "Singles in Hamburg",
+          description: "Finde deinen Partner in der Hansestadt",
+          bundesland: "Hamburg",
+          link: "/singles/hamburg"
+        },
+        {
+          title: "Singles in München",
+          description: "Dating in der bayerischen Hauptstadt",
+          bundesland: "Bayern",
+          link: "/singles/muenchen"
+        }
+      ];
+
       return new Response(
         JSON.stringify({
           websiteContext: "Entdecke mit Singlebörsen-aktuell.de tolle Singles in deiner Nähe!",
-          cityCards: [
-            {
-              title: "Singles in Berlin",
-              description: "Entdecke die vielfältige Dating-Szene Berlins",
-              bundesland: "Berlin",
-              link: "/berlin"
-            },
-            {
-              title: "Singles in Hamburg",
-              description: "Finde deinen Partner in der Hansestadt",
-              bundesland: "Hamburg",
-              link: "/hamburg"
-            },
-            {
-              title: "Singles in München",
-              description: "Dating in der bayerischen Hauptstadt",
-              bundesland: "Bayern",
-              link: "/muenchen"
-            }
-          ]
+          cityCards
         }),
         {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
