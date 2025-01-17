@@ -104,74 +104,40 @@ const singleboersen = {
   }
 };
 
-function generateSchemaMarkup(city: string, bundesland: string) {
-  return {
-    "@context": "https://schema.org",
-    "@type": "Article",
-    "headline": `Singles in ${city} - Die besten Dating-Portale ${new Date().getFullYear()}`,
-    "description": `Finde die besten Dating-Portale in ${city}. Vergleiche jetzt die Top-Singlebörsen und finde deinen Traumpartner in ${city}!`,
-    "image": "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d",
-    "datePublished": new Date().toISOString(),
-    "dateModified": new Date().toISOString(),
-    "author": {
-      "@type": "Organization",
-      "name": "Singlebörsen-Aktuell"
-    },
-    "publisher": {
-      "@type": "Organization",
-      "name": "Singlebörsen-Aktuell",
-      "logo": {
-        "@type": "ImageObject",
-        "url": "/logo.png"
-      }
-    },
-    "mainEntityOfPage": {
-      "@type": "WebPage",
-      "@id": `https://singleboersen-aktuell.de/singles/${city.toLowerCase()}`
-    },
-    "about": {
-      "@type": "City",
-      "name": city,
-      "containedInPlace": {
-        "@type": "State",
-        "name": bundesland
-      }
-    }
+async function generateSectionContent(city: string, section: number, contentOutline: string) {
+  const sectionContent = contentOutline.split('\n').find(line => line.startsWith(`${section}.`));
+  if (!sectionContent) return '';
+
+  let prompt = '';
+  switch (section) {
+    case 1:
+      prompt = `Using the content description from section 1 of the following content outline, generate a heading (h2) and 2 paragraphs for the section about ${city}, and insert this heading and 2 paragraphs into a string:\n\n${sectionContent}`;
+      break;
+    case 2:
+      prompt = `Using the content description from section 2 of the following content outline, generate a heading (h2) and 2 paragraphs for the section about ${city}, and insert this heading and 2 paragraphs into a string:\n\n${sectionContent}`;
+      break;
+    case 3:
+      prompt = `Using the content description from section 3 of the following content outline, generate a heading (h2) and 2 paragraphs for the section about ${city}, and insert this heading and 2 paragraphs into a string:\n\n${sectionContent}`;
+      break;
+    case 4:
+      prompt = `Using the content description from section 4 of the following content outline, generate a heading (h2) and 2 paragraphs for the section about ${city}, and insert this heading and 2 paragraphs into a string:\n\n${sectionContent}`;
+      break;
+    case 5:
+      prompt = `Using the content description from section 5 of the following content outline, generate a heading (h2) and 2 paragraphs for the section about ${city}, and insert this heading and 2 paragraphs into a string:\n\n${sectionContent}`;
+      break;
+    case 6:
+      prompt = `Using the content description from section 6 of the following content outline, generate a heading (h2) and 2 paragraphs for the section about ${city}, and insert this heading and 2 paragraphs into a string:\n\n${sectionContent}`;
+      break;
+    case 7:
+      prompt = `Using the content description from section 7 of the following content outline, generate a heading (h2) and 2 paragraphs for the section about ${city}, and insert this heading and 2 paragraphs into a string:\n\n${sectionContent}`;
+      break;
+    case 8:
+      prompt = `Using the content description from section 8 of the following content outline, generate a heading (h2) and 2 paragraphs for the section about ${city}, and insert this heading and 2 paragraphs into a string:\n\n${sectionContent}`;
+      break;
+    case 9:
+      prompt = `For the '9. Häufig gestellte Fragen' section, loop through each question and ask GPT-4o-mini to generate an answer to the question as it relates to ${city}. Return this as an html section with the original questions included as headings.`;
+      break;
   }
-}
-
-function generateMetadata(city: string) {
-  const currentYear = new Date().getFullYear();
-  return {
-    title: `Singles in ${city} - Die besten Dating-Portale ${currentYear}`,
-    description: `Finde die besten Dating-Portale in ${city}. ✓ Vergleiche jetzt die Top-Singlebörsen ✓ Finde deinen Traumpartner in ${city}! Aktuelle Tests ${currentYear}`,
-    canonical: `https://singleboersen-aktuell.de/singles/${city.toLowerCase()}`,
-    keywords: [
-      `Single ${city}`,
-      `Singles ${city}`,
-      `Wieviele Singles in ${city}`,
-      `Singles in ${city}`,
-      `Single in ${city}`,
-      `Singles aus ${city}`,
-      `Single aus ${city}`,
-      `${city}er Singles`,
-      `${city} Singles`
-    ].join(', ')
-  }
-}
-
-async function generateWebsiteContext() {
-  const openai = new OpenAI({
-    apiKey: Deno.env.get('OPENAI_API_KEY'),
-  });
-
-  const prompt = `Generate a compelling introduction for a dating website comparison platform. 
-  Include information about:
-  - The number of dating portals in Germany (over 2,000)
-  - Our expertise in testing and comparing platforms
-  - Our commitment to finding the best match for users
-  - The importance of choosing a reliable platform
-  Keep the tone professional but friendly. Write in German.`;
 
   try {
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -183,7 +149,7 @@ async function generateWebsiteContext() {
       body: JSON.stringify({
         model: 'gpt-4o-mini',
         messages: [
-          { role: 'system', content: 'You are a helpful assistant that generates content for a dating website comparison platform.' },
+          { role: 'system', content: 'You are a helpful assistant that generates content for city pages.' },
           { role: 'user', content: prompt }
         ],
       }),
@@ -192,18 +158,89 @@ async function generateWebsiteContext() {
     const data = await response.json();
     return data.choices[0].message.content;
   } catch (error) {
-    console.error('Error generating website context:', error);
-    return websiteContext; // Fallback to static content if generation fails
+    console.error(`Error generating content for section ${section}:`, error);
+    return '';
   }
 }
 
-function generateCityCards(cities: any[]) {
-  return cities.map(city => ({
-    title: `Singles in ${city.name}`,
-    description: `Finde die besten Dating-Portale in ${city.name}. Vergleiche jetzt die Top-Singlebörsen und finde deinen Traumpartner!`,
-    link: `/singles/${city.slug}`,
-    bundesland: city.bundesland
-  }));
+async function generateMetaData(city: string) {
+  const prompt = `Generate SEO-optimized meta title and description for a dating website subpage about singles in ${city}. Include the current year and focus on local dating.`;
+
+  try {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: 'You are a helpful assistant that generates SEO metadata.' },
+          { role: 'user', content: prompt }
+        ],
+      }),
+    });
+
+    const data = await response.json();
+    const content = data.choices[0].message.content;
+    const [title, description] = content.split('\n');
+    
+    return {
+      title: title.replace('Title: ', ''),
+      description: description.replace('Description: ', ''),
+      canonical: `https://singleboersen-aktuell.de/singles/${city.toLowerCase()}`,
+      keywords: [
+        `Single ${city}`,
+        `Singles ${city}`,
+        `Wieviele Singles in ${city}`,
+        `Singles in ${city}`,
+        `Single in ${city}`,
+        `Singles aus ${city}`,
+        `Single aus ${city}`,
+        `${city}er Singles`,
+        `${city} Singles`
+      ].join(', ')
+    };
+  } catch (error) {
+    console.error('Error generating metadata:', error);
+    return null;
+  }
+}
+
+async function generateCityContent(city: string, bundesland: string, contentOutline: string) {
+  const sections = {};
+  
+  for (let i = 1; i <= 9; i++) {
+    const sectionContent = await generateSectionContent(city, i, contentOutline);
+    sections[`section${i}`] = sectionContent;
+  }
+
+  return {
+    sections,
+    metadata: await generateMetaData(city),
+    schema: {
+      "@context": "https://schema.org",
+      "@type": "Article",
+      "headline": `Singles in ${city} - Die besten Dating-Portale ${new Date().getFullYear()}`,
+      "description": `Finde die besten Dating-Portale in ${city}. Vergleiche jetzt die Top-Singlebörsen und finde deinen Traumpartner in ${city}!`,
+      "image": "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d",
+      "datePublished": new Date().toISOString(),
+      "dateModified": new Date().toISOString(),
+      "author": {
+        "@type": "Organization",
+        "name": "Singlebörsen-Aktuell"
+      },
+      "publisher": {
+        "@type": "Organization",
+        "name": "Singlebörsen-Aktuell",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "/logo.png"
+        }
+      }
+    }
+  };
 }
 
 serve(async (req) => {
@@ -213,101 +250,102 @@ serve(async (req) => {
 
   try {
     const url = new URL(req.url);
-    const cacheKey = url.pathname + url.search;
+    const path = url.pathname;
+    const citySlug = path.match(/\/singles\/([^\/]+)/)?.[1];
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    )
+    );
 
-    // Check cache first
-    const sixMonthsAgo = new Date();
-    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    // Check if this is a city subpage request
+    if (citySlug) {
+      const { data: cityData } = await supabase
+        .from('cities')
+        .select('*')
+        .eq('slug', citySlug)
+        .single();
 
-    const { data: cachedContent } = await supabase
-      .from('content_cache')
-      .select('content')
-      .eq('cache_key', cacheKey)
-      .gte('expires_at', sixMonthsAgo.toISOString())
-      .maybeSingle();
+      if (!cityData) {
+        return new Response(
+          JSON.stringify({ error: 'City not found' }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 404 
+          }
+        );
+      }
 
-    if (cachedContent) {
-      console.log('Cache hit for:', cacheKey);
+      // Check cache
+      const cacheKey = `city-content-${citySlug}`;
+      const sixMonthsAgo = new Date();
+      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+
+      const { data: cachedContent } = await supabase
+        .from('content_cache')
+        .select('content')
+        .eq('cache_key', cacheKey)
+        .gte('expires_at', sixMonthsAgo.toISOString())
+        .maybeSingle();
+
+      if (cachedContent) {
+        console.log('Cache hit for:', cacheKey);
+        return new Response(
+          JSON.stringify(cachedContent.content),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 200 
+          }
+        );
+      }
+
+      // Generate new content
+      const content = await generateCityContent(
+        cityData.name,
+        cityData.bundesland,
+        contentOutline
+      );
+
+      // Cache the content
+      const expiresAt = new Date();
+      expiresAt.setMonth(expiresAt.getMonth() + 6);
+
+      const { error: cacheError } = await supabase
+        .from('content_cache')
+        .upsert({
+          cache_key: cacheKey,
+          content,
+          expires_at: expiresAt.toISOString()
+        });
+
+      if (cacheError) {
+        console.error('Error caching content:', cacheError);
+      }
+
       return new Response(
-        JSON.stringify(cachedContent.content),
+        JSON.stringify(content),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 200 
         }
-      )
+      );
     }
 
-    // Fetch cities from the database
-    const { data: cities, error } = await supabase
-      .from('cities')
+    // Handle existing homepage functionality
+    const { data: homepageContent } = await supabase
+      .from('homepage_content')
       .select('*')
-      .order('name')
-
-    if (error) {
-      console.error('Error fetching cities:', error)
-      return new Response(
-        JSON.stringify({ error: 'Failed to fetch cities' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 500 
-        }
-      )
-    }
-
-    // Generate dynamic content
-    const dynamicWebsiteContext = await generateWebsiteContext();
-    const cityCards = generateCityCards(cities);
-
-    // Structure the response data with schema and metadata
-    const responseData = {
-      cities: cities.reduce((acc, city) => {
-        acc[city.name] = {
-          name: city.name,
-          bundesland: city.bundesland,
-          slug: city.slug,
-          schema: generateSchemaMarkup(city.name, city.bundesland),
-          metadata: generateMetadata(city.name)
-        }
-        return acc
-      }, {}),
-      websiteContext: dynamicWebsiteContext,
-      contentOutline,
-      singleboersen,
-      cityCards
-    }
-
-    // Cache the response
-    const expiresAt = new Date();
-    expiresAt.setMonth(expiresAt.getMonth() + 6);
-
-    const { error: cacheError } = await supabase
-      .from('content_cache')
-      .upsert({
-        cache_key: cacheKey,
-        content: responseData,
-        expires_at: expiresAt.toISOString()
-      })
-
-    if (cacheError) {
-      console.error('Error caching content:', cacheError);
-    }
-
-    console.log(`Successfully fetched ${cities.length} cities and generated content`);
+      .single();
 
     return new Response(
-      JSON.stringify(responseData),
+      JSON.stringify(homepageContent),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200 
       }
-    )
+    );
   } catch (error) {
-    console.error('Unexpected error:', error)
+    console.error('Unexpected error:', error);
     return new Response(
       JSON.stringify({ error: 'An unexpected error occurred' }),
       { 
@@ -316,4 +354,4 @@ serve(async (req) => {
       }
     )
   }
-})
+});
