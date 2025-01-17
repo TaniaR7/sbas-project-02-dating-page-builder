@@ -26,15 +26,11 @@ serve(async (req) => {
     const cityCards = cities.map((city) => ({
       title: `Singles in ${city.name}`,
       link: `/singles/${city.slug}`,
-      description: `Finde dein Match in ${city.name}`,
-      bundesland: city.bundesland
+      description: `Finde dein Match in ${city.name}`
     }));
 
     return new Response(
-      JSON.stringify({ 
-        cityCards,
-        websiteContext: "Wir helfen dir, aus über 2.000 Dating-Portalen die beste Wahl für dich zu treffen."
-      }), 
+      JSON.stringify({ cityCards }), 
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       }
