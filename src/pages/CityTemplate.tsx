@@ -12,8 +12,7 @@ const CityTemplate = () => {
     queryKey: ['cityContent', citySlug],
     queryFn: async () => {
       const { data } = await supabase.functions.invoke("get-city-data", {
-        body: {},
-        path: `/singles/${citySlug}`,
+        body: { citySlug },
       });
       return data;
     },
