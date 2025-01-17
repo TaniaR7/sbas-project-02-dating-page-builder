@@ -7,30 +7,36 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-const websiteContext = `// ... keep existing code`
-const contentOutline = `// ... keep existing code`
-const singleboersen = `// ... keep existing code`
+// Initialize Supabase client at the top level
+const supabase = createClient(
+  Deno.env.get('SUPABASE_URL') ?? '',
+  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+);
+
+const websiteContext = `Willkommen bei Singlebörsen-Aktuell, Ihrer Anlaufstelle für die besten Dating-Portale. Hier finden Sie umfassende Informationen und Bewertungen zu verschiedenen Plattformen, die Ihnen helfen, den idealen Partner zu finden.`;
+const contentOutline = `1. Einleitung\n2. Die besten Dating-Portale\n3. Tipps für die Partnersuche\n4. Häufig gestellte Fragen\n5. Fazit`;
+const singleboersen = `1. Parship\n2. ElitePartner\n3. eDarling\n4. Tinder\n5. Lovoo`;
 
 async function generateSitemap() {
-  const supabase = createClient(
-    Deno.env.get('SUPABASE_URL') ?? '',
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-  );
+  try {
+    const { data: cities, error } = await supabase
+      .from('cities')
+      .select('slug')
+      .order('name');
 
-  const { data: cities, error } = await supabase
-    .from('cities')
-    .select('slug')
-    .order('name');
+    if (error) {
+      console.error('Error fetching cities:', error);
+      throw error;
+    }
 
-  if (error) {
-    console.error('Error fetching cities:', error);
-    throw error;
-  }
+    if (!cities) {
+      throw new Error('No cities found');
+    }
 
-  const currentDate = new Date().toISOString().split('T')[0];
-  const baseUrl = 'https://lokal.singleboersen-aktuell.de';
+    const currentDate = new Date().toISOString().split('T')[0];
+    const baseUrl = 'https://lokal.singleboersen-aktuell.de';
 
-  let sitemap = `<?xml version="1.0" encoding="UTF-8"?>
+    let sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>${baseUrl}</loc>
@@ -39,18 +45,22 @@ async function generateSitemap() {
     <priority>1.0</priority>
   </url>`;
 
-  for (const city of cities) {
-    sitemap += `
+    for (const city of cities) {
+      sitemap += `
   <url>
     <loc>${baseUrl}/singles/${city.slug}</loc>
     <lastmod>${currentDate}</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>`;
-  }
+    }
 
-  sitemap += '\n</urlset>';
-  return sitemap;
+    sitemap += '\n</urlset>';
+    return sitemap;
+  } catch (error) {
+    console.error('Error generating sitemap:', error);
+    throw error;
+  }
 }
 
 async function generateSectionContent(city: string, section: number, contentOutline: string) {
@@ -245,13 +255,16 @@ async function generateCityContent(city: string, bundesland: string) {
 }
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
+    return new Response(null, { headers: corsHeaders });
   }
 
   try {
     const url = new URL(req.url);
     const path = url.pathname;
+
+    console.log('Request path:', path);
 
     // Handle sitemap.xml request
     if (path === '/sitemap.xml') {
@@ -269,16 +282,22 @@ serve(async (req) => {
     // Check if this is a city subpage request
     const citySlug = path.match(/\/singles\/([^\/]+)/)?.[1];
     if (citySlug) {
-      const supabase = createClient(
-        Deno.env.get('SUPABASE_URL') ?? '',
-        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-      );
-
-      const { data: cityData } = await supabase
+      const { data: cityData, error: cityError } = await supabase
         .from('cities')
         .select('*')
         .eq('slug', citySlug)
         .single();
+
+      if (cityError) {
+        console.error('Error fetching city data:', cityError);
+        return new Response(
+          JSON.stringify({ error: 'Error fetching city data' }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 500 
+          }
+        );
+      }
 
       if (!cityData) {
         return new Response(
@@ -295,12 +314,16 @@ serve(async (req) => {
       const sixMonthsAgo = new Date();
       sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
-      const { data: cachedContent } = await supabase
+      const { data: cachedContent, error: cacheError } = await supabase
         .from('content_cache')
         .select('content')
         .eq('cache_key', cacheKey)
         .gte('expires_at', sixMonthsAgo.toISOString())
         .maybeSingle();
+
+      if (cacheError) {
+        console.error('Error checking cache:', cacheError);
+      }
 
       if (cachedContent) {
         console.log('Cache hit for:', cacheKey);
@@ -314,41 +337,63 @@ serve(async (req) => {
       }
 
       // Generate new content
-      const content = await generateCityContent(
-        cityData.name,
-        cityData.bundesland
-      );
+      try {
+        const content = await generateCityContent(
+          cityData.name,
+          cityData.bundesland
+        );
 
-      // Cache the content
-      const expiresAt = new Date();
-      expiresAt.setMonth(expiresAt.getMonth() + 6);
+        // Cache the content
+        const expiresAt = new Date();
+        expiresAt.setMonth(expiresAt.getMonth() + 6);
 
-      const { error: cacheError } = await supabase
-        .from('content_cache')
-        .upsert({
-          cache_key: cacheKey,
-          content,
-          expires_at: expiresAt.toISOString()
-        });
+        const { error: cacheError } = await supabase
+          .from('content_cache')
+          .upsert({
+            cache_key: cacheKey,
+            content,
+            expires_at: expiresAt.toISOString()
+          });
 
-      if (cacheError) {
-        console.error('Error caching content:', cacheError);
-      }
-
-      return new Response(
-        JSON.stringify(content),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 200 
+        if (cacheError) {
+          console.error('Error caching content:', cacheError);
         }
-      );
+
+        return new Response(
+          JSON.stringify(content),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 200 
+          }
+        );
+      } catch (error) {
+        console.error('Error generating content:', error);
+        return new Response(
+          JSON.stringify({ error: 'Error generating content' }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 500 
+          }
+        );
+      }
     }
 
     // Handle existing homepage functionality
-    const { data: homepageContent } = await supabase
+    const { data: homepageContent, error: homepageError } = await supabase
       .from('homepage_content')
       .select('*')
       .single();
+
+    if (homepageError) {
+      console.error('Error fetching homepage content:', homepageError);
+      return new Response(
+        JSON.stringify({ error: 'Error fetching homepage content' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500 
+        }
+      );
+    }
 
     return new Response(
       JSON.stringify(homepageContent),
@@ -365,6 +410,6 @@ serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500 
       }
-    )
+    );
   }
 });
