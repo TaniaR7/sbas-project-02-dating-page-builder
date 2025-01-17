@@ -5,9 +5,16 @@ import { Helmet } from "react-helmet";
 interface CityTemplateProps {
   city: string;
   bundesland: string;
+  schema?: any;
+  metadata?: {
+    title: string;
+    description: string;
+    canonical: string;
+    keywords: string;
+  };
 }
 
-const CityTemplate = ({ city, bundesland }: CityTemplateProps) => {
+const CityTemplate = ({ city, bundesland, schema, metadata }: CityTemplateProps) => {
   // Sample dating sites data (would be populated from singleboersen)
   const datingSites = [
     {
@@ -25,30 +32,12 @@ const CityTemplate = ({ city, bundesland }: CityTemplateProps) => {
   return (
     <>
       <Helmet>
-        <title>Singles in {city} - Die besten Dating-Portale {new Date().getFullYear()}</title>
-        <meta name="description" content={`Finde die besten Dating-Portale in ${city}. Vergleiche jetzt die Top-Singlebörsen und finde deinen Traumpartner in ${city}!`} />
+        <title>{metadata?.title || `Singles in ${city} - Die besten Dating-Portale ${new Date().getFullYear()}`}</title>
+        <meta name="description" content={metadata?.description} />
+        <meta name="keywords" content={metadata?.keywords} />
+        {metadata?.canonical && <link rel="canonical" href={metadata.canonical} />}
         <script type="application/ld+json">
-          {`
-            {
-              "@context": "https://schema.org",
-              "@type": "Article",
-              "headline": "Singles in ${city} - Die besten Dating-Portale",
-              "description": "Umfassender Vergleich der Dating-Portale in ${city}",
-              "image": "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d",
-              "author": {
-                "@type": "Organization",
-                "name": "Singlebörsen-Aktuell"
-              },
-              "publisher": {
-                "@type": "Organization",
-                "name": "Singlebörsen-Aktuell",
-                "logo": {
-                  "@type": "ImageObject",
-                  "url": "/logo.png"
-                }
-              }
-            }
-          `}
+          {JSON.stringify(schema)}
         </script>
       </Helmet>
 

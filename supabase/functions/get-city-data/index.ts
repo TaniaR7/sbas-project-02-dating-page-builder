@@ -103,6 +103,62 @@ const singleboersen = {
   }
 };
 
+function generateSchemaMarkup(city: string, bundesland: string) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "headline": `Singles in ${city} - Die besten Dating-Portale ${new Date().getFullYear()}`,
+    "description": `Finde die besten Dating-Portale in ${city}. Vergleiche jetzt die Top-Singlebörsen und finde deinen Traumpartner in ${city}!`,
+    "image": "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d",
+    "datePublished": new Date().toISOString(),
+    "dateModified": new Date().toISOString(),
+    "author": {
+      "@type": "Organization",
+      "name": "Singlebörsen-Aktuell"
+    },
+    "publisher": {
+      "@type": "Organization",
+      "name": "Singlebörsen-Aktuell",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "/logo.png"
+      }
+    },
+    "mainEntityOfPage": {
+      "@type": "WebPage",
+      "@id": `https://singleboersen-aktuell.de/singles/${city.toLowerCase()}`
+    },
+    "about": {
+      "@type": "City",
+      "name": city,
+      "containedInPlace": {
+        "@type": "State",
+        "name": bundesland
+      }
+    }
+  }
+}
+
+function generateMetadata(city: string) {
+  const currentYear = new Date().getFullYear();
+  return {
+    title: `Singles in ${city} - Die besten Dating-Portale ${currentYear}`,
+    description: `Finde die besten Dating-Portale in ${city}. ✓ Vergleiche jetzt die Top-Singlebörsen ✓ Finde deinen Traumpartner in ${city}! Aktuelle Tests ${currentYear}`,
+    canonical: `https://singleboersen-aktuell.de/singles/${city.toLowerCase()}`,
+    keywords: [
+      `Single ${city}`,
+      `Singles ${city}`,
+      `Wieviele Singles in ${city}`,
+      `Singles in ${city}`,
+      `Single in ${city}`,
+      `Singles aus ${city}`,
+      `Single aus ${city}`,
+      `${city}er Singles`,
+      `${city} Singles`
+    ].join(', ')
+  }
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -110,11 +166,36 @@ serve(async (req) => {
   }
 
   try {
+    const url = new URL(req.url);
+    const cacheKey = url.pathname + url.search;
+
     // Create Supabase client
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
+
+    // Check cache first
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+
+    const { data: cachedContent } = await supabase
+      .from('content_cache')
+      .select('content')
+      .eq('cache_key', cacheKey)
+      .gte('expires_at', sixMonthsAgo.toISOString())
+      .maybeSingle();
+
+    if (cachedContent) {
+      console.log('Cache hit for:', cacheKey);
+      return new Response(
+        JSON.stringify(cachedContent.content),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200 
+        }
+      )
+    }
 
     // Fetch cities from the database
     const { data: cities, error } = await supabase
@@ -133,13 +214,15 @@ serve(async (req) => {
       )
     }
 
-    // Structure the response data
+    // Structure the response data with schema and metadata
     const responseData = {
       cities: cities.reduce((acc, city) => {
         acc[city.name] = {
           name: city.name,
           bundesland: city.bundesland,
-          slug: city.slug
+          slug: city.slug,
+          schema: generateSchemaMarkup(city.name, city.bundesland),
+          metadata: generateMetadata(city.name)
         }
         return acc
       }, {}),
@@ -148,7 +231,23 @@ serve(async (req) => {
       singleboersen
     }
 
-    console.log(`Successfully fetched ${cities.length} cities`)
+    // Cache the response
+    const expiresAt = new Date();
+    expiresAt.setMonth(expiresAt.getMonth() + 6);
+
+    const { error: cacheError } = await supabase
+      .from('content_cache')
+      .upsert({
+        cache_key: cacheKey,
+        content: responseData,
+        expires_at: expiresAt.toISOString()
+      })
+
+    if (cacheError) {
+      console.error('Error caching content:', cacheError);
+    }
+
+    console.log(`Successfully fetched ${cities.length} cities and generated SEO data`);
 
     return new Response(
       JSON.stringify(responseData),
