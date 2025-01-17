@@ -13,6 +13,11 @@ const Index = () => {
     },
   });
 
+  const scrollToSection = (elementId: string) => {
+    const element = document.getElementById(elementId);
+    element?.scrollIntoView({ behavior: 'smooth' });
+  };
+
   const categories = [
     {
       title: "Partnervermittlung",
@@ -77,23 +82,15 @@ const Index = () => {
         </div>
       </header>
 
-      {/* City Cards Section */}
-      {data?.cityCards && (
-        <section className="py-16 container mx-auto px-4">
-          <h2 className="text-3xl font-bold text-center mb-12">Singles in deiner Stadt</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {data.cityCards.map((city: any) => (
-              <Link to={city.link} key={city.title}>
-                <Card className="p-6 hover:shadow-lg transition-shadow">
-                  <h3 className="text-xl font-semibold mb-3">{city.title}</h3>
-                  <p className="text-gray-600 mb-2">{city.description}</p>
-                  <p className="text-sm text-gray-500">{city.bundesland}</p>
-                </Card>
-              </Link>
-            ))}
-          </div>
-        </section>
-      )}
+      {/* City Cards Link */}
+      <div className="py-16 container mx-auto px-4">
+        <h2 
+          onClick={() => scrollToSection('city-cards')} 
+          className="text-3xl font-bold text-center mb-12 cursor-pointer hover:text-primary transition-colors"
+        >
+          Singles in deiner Stadt
+        </h2>
+      </div>
 
       {/* Categories Section */}
       <section className="py-16 container mx-auto px-4">
@@ -145,6 +142,24 @@ const Index = () => {
           ))}
         </div>
       </section>
+
+      {/* City Cards Section */}
+      {data?.cityCards && (
+        <section id="city-cards" className="py-16 container mx-auto px-4">
+          <h2 className="text-3xl font-bold text-center mb-12">Singles in deiner Stadt</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {data.cityCards.map((city: any) => (
+              <Link to={city.link} key={city.title}>
+                <Card className="p-6 hover:shadow-lg transition-shadow">
+                  <h3 className="text-xl font-semibold mb-3">{city.title}</h3>
+                  <p className="text-gray-600 mb-2">{city.description}</p>
+                  <p className="text-sm text-gray-500">{city.bundesland}</p>
+                </Card>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Footer */}
       <footer className="bg-gray-900 text-white py-12">
