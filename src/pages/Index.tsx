@@ -1,7 +1,18 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Link } from "react-router-dom";
 
 const Index = () => {
+  const { data, isLoading } = useQuery({
+    queryKey: ['cityData'],
+    queryFn: async () => {
+      const { data } = await supabase.functions.invoke('get-city-data');
+      return data;
+    },
+  });
+
   const categories = [
     {
       title: "Partnervermittlung",
@@ -43,6 +54,12 @@ const Index = () => {
     },
   ];
 
+  if (isLoading) {
+    return <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+    </div>;
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Hero Section */}
@@ -52,13 +69,31 @@ const Index = () => {
             Entdecke tolle Singles in deiner Nähe!
           </h1>
           <p className="text-xl mb-8 max-w-2xl mx-auto">
-            Wir helfen dir, aus über 2.000 Dating-Portalen die beste Wahl für dich zu treffen.
+            {data?.websiteContext || "Wir helfen dir, aus über 2.000 Dating-Portalen die beste Wahl für dich zu treffen."}
           </p>
           <Button size="lg" variant="secondary" className="bg-white text-primary hover:bg-gray-100">
             Zu unseren Testsiegern
           </Button>
         </div>
       </header>
+
+      {/* City Cards Section */}
+      {data?.cityCards && (
+        <section className="py-16 container mx-auto px-4">
+          <h2 className="text-3xl font-bold text-center mb-12">Singles in deiner Stadt</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {data.cityCards.map((city: any) => (
+              <Link to={city.link} key={city.title}>
+                <Card className="p-6 hover:shadow-lg transition-shadow">
+                  <h3 className="text-xl font-semibold mb-3">{city.title}</h3>
+                  <p className="text-gray-600 mb-2">{city.description}</p>
+                  <p className="text-sm text-gray-500">{city.bundesland}</p>
+                </Card>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Categories Section */}
       <section className="py-16 container mx-auto px-4">

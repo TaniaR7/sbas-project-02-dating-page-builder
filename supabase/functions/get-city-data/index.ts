@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import "https://deno.land/x/xhr@0.1.0/mod.ts"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -159,8 +160,53 @@ function generateMetadata(city: string) {
   }
 }
 
+async function generateWebsiteContext() {
+  const openai = new OpenAI({
+    apiKey: Deno.env.get('OPENAI_API_KEY'),
+  });
+
+  const prompt = `Generate a compelling introduction for a dating website comparison platform. 
+  Include information about:
+  - The number of dating portals in Germany (over 2,000)
+  - Our expertise in testing and comparing platforms
+  - Our commitment to finding the best match for users
+  - The importance of choosing a reliable platform
+  Keep the tone professional but friendly. Write in German.`;
+
+  try {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: 'You are a helpful assistant that generates content for a dating website comparison platform.' },
+          { role: 'user', content: prompt }
+        ],
+      }),
+    });
+
+    const data = await response.json();
+    return data.choices[0].message.content;
+  } catch (error) {
+    console.error('Error generating website context:', error);
+    return websiteContext; // Fallback to static content if generation fails
+  }
+}
+
+function generateCityCards(cities: any[]) {
+  return cities.map(city => ({
+    title: `Singles in ${city.name}`,
+    description: `Finde die besten Dating-Portale in ${city.name}. Vergleiche jetzt die Top-Singlebörsen und finde deinen Traumpartner!`,
+    link: `/singles/${city.slug}`,
+    bundesland: city.bundesland
+  }));
+}
+
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
@@ -169,7 +215,6 @@ serve(async (req) => {
     const url = new URL(req.url);
     const cacheKey = url.pathname + url.search;
 
-    // Create Supabase client
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -214,6 +259,10 @@ serve(async (req) => {
       )
     }
 
+    // Generate dynamic content
+    const dynamicWebsiteContext = await generateWebsiteContext();
+    const cityCards = generateCityCards(cities);
+
     // Structure the response data with schema and metadata
     const responseData = {
       cities: cities.reduce((acc, city) => {
@@ -226,9 +275,10 @@ serve(async (req) => {
         }
         return acc
       }, {}),
-      websiteContext,
+      websiteContext: dynamicWebsiteContext,
       contentOutline,
-      singleboersen
+      singleboersen,
+      cityCards
     }
 
     // Cache the response
@@ -247,7 +297,7 @@ serve(async (req) => {
       console.error('Error caching content:', cacheError);
     }
 
-    console.log(`Successfully fetched ${cities.length} cities and generated SEO data`);
+    console.log(`Successfully fetched ${cities.length} cities and generated content`);
 
     return new Response(
       JSON.stringify(responseData),
