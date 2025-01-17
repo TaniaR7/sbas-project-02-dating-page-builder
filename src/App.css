@@ -1,42 +1,200 @@
+/* Reset and base styles */
+:root {
+  --primary-color: #CC0000;
+  --secondary-color: #4A5568;
+  --text-color: #3b4040;
+  --background-color: #eee;
+  --white: #FFFFFF;
+  --max-width: 1280px;
+  --transition-speed: 300ms;
+}
+
+/* Base styles with performance optimizations */
 #root {
-  max-width: 1280px;
+  max-width: var(--max-width);
   margin: 0 auto;
-  padding: 2rem;
+  padding: 1rem;
   text-align: center;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+/* Typography optimizations */
+body {
+  font-family: 'Montserrat', system-ui, -apple-system, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--text-color);
+  background-color: var(--background-color);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+/* Mobile-first responsive images */
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 0 auto;
 }
 
+/* Performance optimized animations */
 @media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
+  .animate-fade {
+    transition: opacity var(--transition-speed) ease-in-out;
+  }
+  
+  .animate-slide {
+    transition: transform var(--transition-speed) ease-in-out;
   }
 }
 
-.card {
-  padding: 2em;
+/* Mobile-first grid system */
+.grid-container {
+  display: grid;
+  gap: 1rem;
+  padding: 1rem;
+  grid-template-columns: 1fr;
 }
 
-.read-the-docs {
-  color: #888;
+/* Responsive breakpoints */
+@media (min-width: 640px) {
+  .grid-container {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  #root {
+    padding: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .grid-container {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  
+  #root {
+    padding: 2rem;
+  }
+}
+
+/* Card components */
+.card {
+  background: var(--white);
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: transform var(--transition-speed) ease-in-out;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+}
+
+/* Hero section */
+.hero {
+  background-color: var(--primary-color);
+  color: var(--white);
+  padding: 2rem 1rem;
+  margin: -1rem -1rem 2rem -1rem;
+}
+
+@media (min-width: 768px) {
+  .hero {
+    padding: 4rem 2rem;
+    margin: -1.5rem -1.5rem 3rem -1.5rem;
+  }
+}
+
+/* Content sections */
+.section {
+  margin: 2rem 0;
+  padding: 1rem;
+}
+
+@media (min-width: 768px) {
+  .section {
+    margin: 4rem 0;
+    padding: 2rem;
+  }
+}
+
+/* Footer */
+.footer {
+  background-color: var(--secondary-color);
+  color: var(--white);
+  padding: 2rem 1rem;
+  margin-top: 3rem;
+}
+
+/* Utility classes */
+.container {
+  width: 100%;
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.mb-4 {
+  margin-bottom: 1rem;
+}
+
+.mb-8 {
+  margin-bottom: 2rem;
+}
+
+/* Logo styles */
+.logo {
+  width: 120px;
+  height: auto;
+  margin: 0 auto;
+}
+
+/* Button styles */
+.button {
+  display: inline-block;
+  padding: 0.75rem 1.5rem;
+  border-radius: 4px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background-color var(--transition-speed) ease-in-out;
+  cursor: pointer;
+}
+
+.button-primary {
+  background-color: var(--primary-color);
+  color: var(--white);
+}
+
+.button-primary:hover {
+  background-color: #a30000;
+}
+
+/* Form elements */
+input,
+textarea,
+select {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+}
+
+/* Loading states */
+.skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: skeleton-loading 1.5s infinite;
+}
+
+@keyframes skeleton-loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
 }
