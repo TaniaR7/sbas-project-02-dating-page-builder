@@ -14,7 +14,7 @@ export async function getPixabayImage(query: string, apiKey: string): Promise<st
   try {
     // Clean the query to use just the city name
     const cleanQuery = encodeURIComponent(query.trim());
-    const url = `https://pixabay.com/api/?key=${apiKey}&q=${cleanQuery}&image_type=photo&per_page=1`;
+    const url = `https://pixabay.com/api/?key=${apiKey}&q=${cleanQuery}&image_type=photo&per_page=3`;
     console.log('Fetching Pixabay image with URL:', url);
     
     const response = await fetch(url);
@@ -31,6 +31,7 @@ export async function getPixabayImage(query: string, apiKey: string): Promise<st
       return getDefaultImage();
     }
 
+    // Always use the first image from the results
     console.log('Successfully fetched image from Pixabay');
     return data.hits[0].largeImageURL;
   } catch (error) {
