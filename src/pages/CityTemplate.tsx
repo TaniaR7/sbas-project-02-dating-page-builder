@@ -132,7 +132,7 @@ const CityTemplate = () => {
               <div>
                 <h3 className="text-lg font-semibold mb-4">Über uns</h3>
                 <p className="text-gray-400">
-                  Wir helfen dir seit fast 10 Jahren dabei, die perfekte Dating-Plattform zu finden.
+                  Wir helfen Singles seit fast 10 Jahren, die perfekte Dating-Plattform zu finden.
                 </p>
               </div>
               <div>
