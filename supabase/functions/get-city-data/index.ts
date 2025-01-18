@@ -73,7 +73,6 @@ serve(async (req) => {
       );
     }
 
-    // Check if city exists
     const { data: cityData, error: cityError } = await supabase
       .from("cities")
       .select("name, bundesland")
@@ -91,7 +90,6 @@ serve(async (req) => {
       );
     }
 
-    // Check cache
     const cacheKey = `singles/${citySlug}`;
     const { data: cachedContent, error: cacheError } = await supabase
       .from("content_cache")
@@ -110,7 +108,6 @@ serve(async (req) => {
       );
     }
 
-    // Generate content using GPT-4
     console.log("Generating new content for", citySlug);
     const prompt = `Generate content for a dating website page about singles in ${cityData.name}, ${cityData.bundesland}. 
                    Include information about the dating scene, popular meeting places, and statistics about singles.
@@ -128,7 +125,7 @@ serve(async (req) => {
       body: JSON.stringify({
         model: "gpt-4o-mini",
         messages: [
-          { role: "system", content: "You are a helpful assistant that generates content for dating websites in German language." },
+          { role: "system", content: "You are a helpful assistant that generates content for dating websites in German language. Return only valid JSON without any markdown formatting." },
           { role: "user", content: prompt }
         ],
         temperature: 0.7,
@@ -151,14 +148,15 @@ serve(async (req) => {
 
     let generatedContent;
     try {
-      generatedContent = JSON.parse(gptData.choices[0].message.content);
+      const content = gptData.choices[0].message.content;
+      const cleanContent = content.replace(/```json\n?|\n?```/g, '').trim();
+      generatedContent = JSON.parse(cleanContent);
     } catch (parseError) {
       console.error("Failed to parse GPT response:", parseError);
       console.log("Raw content:", gptData.choices[0].message.content);
       throw new Error("Failed to parse generated content");
     }
 
-    // Get images from Pixabay
     console.log("Fetching images from Pixabay");
     const pixabayResponse = await fetch(
       `https://pixabay.com/api/?key=${PIXABAY_API_KEY}&q=${encodeURIComponent(cityData.name + " city")}&image_type=photo&per_page=2`
@@ -173,7 +171,6 @@ serve(async (req) => {
     const pixabayData = await pixabayResponse.json();
     const images = pixabayData.hits.slice(0, 2).map((hit: any) => hit.largeImageURL);
 
-    // Combine content with images and dating site recommendations
     const finalContent = {
       ...generatedContent,
       images,
@@ -192,7 +189,6 @@ serve(async (req) => {
       ]
     };
 
-    // Cache the content
     const expiresAt = new Date();
     expiresAt.setMonth(expiresAt.getMonth() + 6); // Cache for 6 months
 
