@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { corsHeaders } from "../_shared/cors.ts";
+import { corsHeaders, getPixabayImage } from "../_shared/pixabay.ts";
 
 const PIXABAY_API_KEY = Deno.env.get("PIXABAY_API_KEY");
 const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
@@ -123,7 +123,7 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini",
+        model: "gpt-4",
         messages: [
           { role: "system", content: "You are a helpful assistant that generates content for dating websites in German language. Return only valid JSON without any markdown formatting." },
           { role: "user", content: prompt }
@@ -158,22 +158,12 @@ serve(async (req) => {
     }
 
     console.log("Fetching images from Pixabay");
-    const pixabayResponse = await fetch(
-      `https://pixabay.com/api/?key=${PIXABAY_API_KEY}&q=${encodeURIComponent(cityData.name + " city")}&image_type=photo&per_page=2`
-    );
-
-    if (!pixabayResponse.ok) {
-      const errorText = await pixabayResponse.text();
-      console.error("Pixabay API error:", errorText);
-      throw new Error("Failed to fetch images");
-    }
-
-    const pixabayData = await pixabayResponse.json();
-    const images = pixabayData.hits.slice(0, 2).map((hit: any) => hit.largeImageURL);
+    const cityImage = await getPixabayImage(`${cityData.name} city`, PIXABAY_API_KEY!);
+    const lifestyleImage = await getPixabayImage(`${cityData.name} lifestyle`, PIXABAY_API_KEY!);
 
     const finalContent = {
       ...generatedContent,
-      images,
+      images: [cityImage, lifestyleImage],
       cityName: cityData.name,
       datingSites: [
         {
@@ -190,7 +180,7 @@ serve(async (req) => {
     };
 
     const expiresAt = new Date();
-    expiresAt.setMonth(expiresAt.getMonth() + 6); // Cache for 6 months
+    expiresAt.setMonth(expiresAt.getMonth() + 6);
 
     const { error: insertError } = await supabase
       .from("content_cache")
