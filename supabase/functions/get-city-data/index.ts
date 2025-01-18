@@ -41,26 +41,7 @@ serve(async (req) => {
         description: `Entdecke die Dating-Szene in ${city.name}`,
         bundesland: city.bundesland,
         link: `/singles/${city.slug}`
-      })) || [
-        {
-          title: "Singles in Berlin",
-          description: "Entdecke die vielfältige Dating-Szene Berlins",
-          bundesland: "Berlin",
-          link: "/singles/berlin"
-        },
-        {
-          title: "Singles in Hamburg",
-          description: "Finde deinen Partner in der Hansestadt",
-          bundesland: "Hamburg",
-          link: "/singles/hamburg"
-        },
-        {
-          title: "Singles in München",
-          description: "Dating in der bayerischen Hauptstadt",
-          bundesland: "Bayern",
-          link: "/singles/muenchen"
-        }
-      ];
+      })) || [];
 
       return new Response(
         JSON.stringify({
@@ -73,8 +54,8 @@ serve(async (req) => {
       );
     }
 
-    // Check cache first
-    const cacheKey = `singles/${citySlug}`;
+    // Check cache first before doing anything else
+    const cacheKey = `/singles/${citySlug}`;
     console.log("Checking cache for key:", cacheKey);
     
     const { data: cachedContent, error: cacheError } = await supabase
@@ -93,11 +74,11 @@ serve(async (req) => {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           }
         );
-      } else {
-        console.log("Cache expired for", citySlug);
       }
+      console.log("Cache expired for", citySlug);
     }
 
+    // If we reach here, we need to generate new content
     const { data: cityData, error: cityError } = await supabase
       .from("cities")
       .select("name, bundesland")
@@ -118,10 +99,7 @@ serve(async (req) => {
     console.log("Generating new content for", citySlug);
     const prompt = `Generate content for a dating website page about singles in ${cityData.name}, ${cityData.bundesland}. 
                    Include information about the dating scene, popular meeting places, and statistics about singles.
-                   Format the response in JSON with these sections:
-                   - introduction (2-3 sentences)
-                   - cityInfo: { title: string, content: string }
-                   - sections: Array of { title: string, content: string }`;
+                   Format the response as plain text, not JSON.`;
 
     const gptResponse = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -132,7 +110,7 @@ serve(async (req) => {
       body: JSON.stringify({
         model: "gpt-4o-mini",
         messages: [
-          { role: "system", content: "You are a helpful assistant that generates content for dating websites in German language. Return only valid JSON without any markdown formatting." },
+          { role: "system", content: "You are a helpful assistant that generates content for dating websites in German language." },
           { role: "user", content: prompt }
         ],
         temperature: 0.7,
@@ -141,27 +119,15 @@ serve(async (req) => {
     });
 
     if (!gptResponse.ok) {
-      const errorText = await gptResponse.text();
-      console.error("OpenAI API error:", errorText);
-      throw new Error(`Failed to generate content: ${errorText}`);
+      console.error("OpenAI API error:", await gptResponse.text());
+      throw new Error("Failed to generate content");
     }
 
     const gptData = await gptResponse.json();
-    console.log("Raw GPT response:", JSON.stringify(gptData));
+    const generatedContent = gptData.choices?.[0]?.message?.content;
 
-    if (!gptData.choices?.[0]?.message?.content) {
+    if (!generatedContent) {
       throw new Error("Invalid response from OpenAI API");
-    }
-
-    let generatedContent;
-    try {
-      const content = gptData.choices[0].message.content;
-      const cleanContent = content.replace(/```json\n?|\n?```/g, '').trim();
-      generatedContent = JSON.parse(cleanContent);
-    } catch (parseError) {
-      console.error("Failed to parse GPT response:", parseError);
-      console.log("Raw content:", gptData.choices[0].message.content);
-      throw new Error("Failed to parse generated content");
     }
 
     console.log("Fetching images from Pixabay");
@@ -169,7 +135,7 @@ serve(async (req) => {
     const lifestyleImage = await getPixabayImage(`${cityData.name} lifestyle`, PIXABAY_API_KEY!);
 
     const finalContent = {
-      ...generatedContent,
+      content: generatedContent,
       images: [cityImage, lifestyleImage],
       cityName: cityData.name,
       datingSites: [
@@ -214,8 +180,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         error: "An unexpected error occurred", 
-        details: error.message,
-        stack: error.stack 
+        details: error.message
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },

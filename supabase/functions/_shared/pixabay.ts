@@ -4,10 +4,17 @@ export const corsHeaders = {
 };
 
 export async function getPixabayImage(query: string, apiKey: string): Promise<string> {
+  if (!query || !apiKey) {
+    console.log('Missing query or API key, returning default image');
+    return getDefaultImage();
+  }
+
   try {
-    const response = await fetch(
-      `https://pixabay.com/api/?key=${apiKey}&q=${encodeURIComponent(query)}&image_type=photo&per_page=1`
-    );
+    const cleanQuery = encodeURIComponent(query.trim());
+    const url = `https://pixabay.com/api/?key=${apiKey}&q=${cleanQuery}&image_type=photo&per_page=1`;
+    console.log('Fetching Pixabay image for query:', cleanQuery);
+    
+    const response = await fetch(url);
 
     if (!response.ok) {
       console.error(`Pixabay API error: ${response.status} ${response.statusText}`);
@@ -29,5 +36,15 @@ export async function getPixabayImage(query: string, apiKey: string): Promise<st
 }
 
 function getDefaultImage(): string {
-  return 'https://images.unsplash.com/photo-1519999482648-25049ddd37b1?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2456&q=80';
+  // Return one of several default images randomly to ensure variety
+  const defaultImages = [
+    'https://images.unsplash.com/photo-1519999482648-25049ddd37b1',
+    'https://images.unsplash.com/photo-1488590528505-98d2b5aba04b',
+    'https://images.unsplash.com/photo-1518770660439-4636190af475',
+    'https://images.unsplash.com/photo-1461749280684-dccba630e2f6',
+    'https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d'
+  ];
+  
+  const randomIndex = Math.floor(Math.random() * defaultImages.length);
+  return defaultImages[randomIndex];
 }
