@@ -73,6 +73,31 @@ serve(async (req) => {
       );
     }
 
+    // Check cache first
+    const cacheKey = `singles/${citySlug}`;
+    console.log("Checking cache for key:", cacheKey);
+    
+    const { data: cachedContent, error: cacheError } = await supabase
+      .from("content_cache")
+      .select("content, expires_at")
+      .eq("cache_key", cacheKey)
+      .single();
+
+    if (!cacheError && cachedContent) {
+      const expiresAt = new Date(cachedContent.expires_at);
+      if (expiresAt > new Date()) {
+        console.log("Returning cached content for", citySlug);
+        return new Response(
+          JSON.stringify(cachedContent.content),
+          {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
+      } else {
+        console.log("Cache expired for", citySlug);
+      }
+    }
+
     const { data: cityData, error: cityError } = await supabase
       .from("cities")
       .select("name, bundesland")
@@ -86,24 +111,6 @@ serve(async (req) => {
         {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
           status: 404,
-        }
-      );
-    }
-
-    const cacheKey = `singles/${citySlug}`;
-    const { data: cachedContent, error: cacheError } = await supabase
-      .from("content_cache")
-      .select("content")
-      .eq("cache_key", cacheKey)
-      .gt("expires_at", new Date().toISOString())
-      .single();
-
-    if (!cacheError && cachedContent) {
-      console.log("Returning cached content for", citySlug);
-      return new Response(
-        JSON.stringify(cachedContent.content),
-        {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
         }
       );
     }
@@ -123,7 +130,7 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gpt-4",
+        model: "gpt-4o-mini",
         messages: [
           { role: "system", content: "You are a helpful assistant that generates content for dating websites in German language. Return only valid JSON without any markdown formatting." },
           { role: "user", content: prompt }
@@ -179,12 +186,13 @@ serve(async (req) => {
       ]
     };
 
+    // Set cache expiration to 6 months from now
     const expiresAt = new Date();
     expiresAt.setMonth(expiresAt.getMonth() + 6);
 
     const { error: insertError } = await supabase
       .from("content_cache")
-      .insert({
+      .upsert({
         cache_key: cacheKey,
         content: finalContent,
         expires_at: expiresAt.toISOString(),
