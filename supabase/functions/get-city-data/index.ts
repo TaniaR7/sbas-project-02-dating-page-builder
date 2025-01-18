@@ -25,6 +25,7 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    // Handle homepage request
     if (!citySlug) {
       const { data: cities, error: citiesError } = await supabase
         .from("cities")
@@ -54,7 +55,7 @@ serve(async (req) => {
       );
     }
 
-    // Check cache first before doing anything else
+    // Check cache first
     const cacheKey = `/singles/${citySlug}`;
     console.log("Checking cache for key:", cacheKey);
     
@@ -130,13 +131,13 @@ serve(async (req) => {
       throw new Error("Invalid response from OpenAI API");
     }
 
-    console.log("Fetching images from Pixabay");
-    const cityImage = await getPixabayImage(`${cityData.name} city`, PIXABAY_API_KEY!);
-    const lifestyleImage = await getPixabayImage(`${cityData.name} lifestyle`, PIXABAY_API_KEY!);
+    // Get only one image for the city
+    console.log("Fetching image from Pixabay");
+    const cityImage = await getPixabayImage(cityData.name, PIXABAY_API_KEY!);
 
     const finalContent = {
       content: generatedContent,
-      images: [cityImage, lifestyleImage],
+      images: [cityImage],
       cityName: cityData.name,
       datingSites: [
         {

@@ -4,15 +4,18 @@ export const corsHeaders = {
 };
 
 export async function getPixabayImage(query: string, apiKey: string): Promise<string> {
+  console.log('Starting Pixabay image fetch for query:', query);
+  
   if (!query || !apiKey) {
     console.log('Missing query or API key, returning default image');
     return getDefaultImage();
   }
 
   try {
+    // Clean the query to use just the city name
     const cleanQuery = encodeURIComponent(query.trim());
     const url = `https://pixabay.com/api/?key=${apiKey}&q=${cleanQuery}&image_type=photo&per_page=1`;
-    console.log('Fetching Pixabay image for query:', cleanQuery);
+    console.log('Fetching Pixabay image with URL:', url);
     
     const response = await fetch(url);
 
@@ -28,6 +31,7 @@ export async function getPixabayImage(query: string, apiKey: string): Promise<st
       return getDefaultImage();
     }
 
+    console.log('Successfully fetched image from Pixabay');
     return data.hits[0].largeImageURL;
   } catch (error) {
     console.error('Error fetching Pixabay image:', error);
