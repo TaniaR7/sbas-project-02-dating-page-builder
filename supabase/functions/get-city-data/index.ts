@@ -118,7 +118,7 @@ async function generateSectionContent(section: Section): Promise<GeneratedSectio
       body: JSON.stringify({
         model: "gpt-4o-mini",
         messages: [
-          { role: "system", content: "You are a helpful assistant that generates content for dating websites in German language. Always use markdown formatting for better readability." },
+          { role: "system", content: "You are a helpful dating assistant that generates SEO optimized content for dating websites in German language. Always use markdown formatting for better readability." },
           { role: "user", content: section.prompt }
         ],
         temperature: 0.7,
