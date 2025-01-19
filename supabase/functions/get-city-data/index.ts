@@ -196,7 +196,7 @@ serve(async (req) => {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            model: "gpt-4",
+            model: "gpt-4o-mini", // Updated to use gpt-4o-mini instead of gpt-4o
             messages: [
               { role: "system", content: "You are a helpful assistant that generates content for dating websites in German language. Always use markdown formatting for better readability." },
               { role: "user", content: section.prompt }
