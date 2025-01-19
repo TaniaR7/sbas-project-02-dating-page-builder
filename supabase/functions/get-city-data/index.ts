@@ -6,6 +6,7 @@ const PIXABAY_API_KEY = Deno.env.get("PIXABAY_API_KEY");
 const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
 
 serve(async (req) => {
+  // Always handle CORS preflight requests first
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -101,6 +102,10 @@ serve(async (req) => {
     const prompt = `Generate content for a dating website page about singles in ${cityData.name}, ${cityData.bundesland}. 
                    Include information about the dating scene, popular meeting places, and statistics about singles.
                    Format the response as plain text, not JSON.`;
+
+    if (!OPENAI_API_KEY) {
+      throw new Error("OpenAI API key not configured");
+    }
 
     const gptResponse = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
