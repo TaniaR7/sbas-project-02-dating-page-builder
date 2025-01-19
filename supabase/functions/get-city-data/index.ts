@@ -99,51 +99,93 @@ serve(async (req) => {
     }
 
     console.log("Generating new content for", citySlug);
-    const prompt = `Generate content for a dating website page about singles in ${cityData.name}, ${cityData.bundesland}. 
-                   Include information about the dating scene, popular meeting places, and statistics about singles.
-                   Format the response as plain text, not JSON.`;
+
+    // Generate content for each section
+    const sections = [
+      {
+        title: `${cityData.name} – Die Stadt der Singles`,
+        prompt: `Write a welcoming introduction about singles in ${cityData.name}, focusing on the city's appeal for singles and dating. Include why ${cityData.name} is an exciting place for singles.`
+      },
+      {
+        title: `${cityData.name}: Eine Stadt für Lebensfreude und Begegnungen`,
+        prompt: `Describe ${cityData.name}'s unique characteristics, culture, and lifestyle that make it attractive for singles. Include specific details about the city's atmosphere and what makes it special for dating.`
+      },
+      {
+        title: `Die besten Orte, um andere Singles zu treffen`,
+        prompt: `List and describe the best places in ${cityData.name} for singles to meet, including popular bars, cafes, cultural venues, and outdoor spaces. Be specific about locations and what makes them good for meeting people.`
+      },
+      {
+        title: `Singles in ${cityData.name}`,
+        prompt: `Provide information about the single population in ${cityData.name}, including demographics, age distribution, and interesting statistics about singles in the city.`
+      },
+      {
+        title: `Veranstaltungen und Netzwerke für Singles in ${cityData.name}`,
+        prompt: `Detail the various events, meetups, and networking opportunities available for singles in ${cityData.name}. Include specific events and organizations that cater to singles.`
+      }
+    ];
 
     if (!OPENAI_API_KEY) {
       throw new Error("OpenAI API key not configured");
     }
 
-    const gptResponse = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${OPENAI_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "gpt-4o",
-        messages: [
-          { role: "system", content: "You are a helpful assistant that generates content for dating websites in German language." },
-          { role: "user", content: prompt }
-        ],
-        temperature: 0.7,
-        max_tokens: 2000,
-      }),
-    });
+    const generatedSections = await Promise.all(sections.map(async (section) => {
+      try {
+        const gptResponse = await fetch("https://api.openai.com/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${OPENAI_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "gpt-4o",
+            messages: [
+              { role: "system", content: "You are a helpful assistant that generates content for dating websites in German language." },
+              { role: "user", content: section.prompt }
+            ],
+            temperature: 0.7,
+            max_tokens: 1000,
+          }),
+        });
 
-    if (!gptResponse.ok) {
-      console.error("OpenAI API error:", await gptResponse.text());
-      throw new Error("Failed to generate content");
-    }
+        if (!gptResponse.ok) {
+          console.error(`OpenAI API error for section ${section.title}:`, await gptResponse.text());
+          return {
+            title: section.title,
+            content: `Content generation failed for this section. Please try again later.`
+          };
+        }
 
-    const gptData = await gptResponse.json();
-    const generatedContent = gptData.choices?.[0]?.message?.content;
+        const gptData = await gptResponse.json();
+        return {
+          title: section.title,
+          content: gptData.choices?.[0]?.message?.content || "No content generated"
+        };
+      } catch (error) {
+        console.error(`Error generating content for section ${section.title}:`, error);
+        return {
+          title: section.title,
+          content: `Error generating content: ${error.message}`
+        };
+      }
+    }));
 
-    if (!generatedContent) {
-      throw new Error("Invalid response from OpenAI API");
-    }
-
-    // Get only one image for the city
-    console.log("Fetching image from Pixabay");
+    // Get city images
+    console.log("Fetching images from Pixabay");
     const cityImage = await getPixabayImage(cityData.name, PIXABAY_API_KEY!);
+    const cityImage2 = await getPixabayImage(`${cityData.name} city`, PIXABAY_API_KEY!);
 
     const finalContent = {
-      content: generatedContent,
-      images: [cityImage],
       cityName: cityData.name,
+      bundesland: cityData.bundesland,
+      title: `Singles in ${cityData.name} - Die besten Dating-Portale ${new Date().getFullYear()}`,
+      description: `Entdecke die Dating-Szene in ${cityData.name}. Finde die besten Orte zum Kennenlernen und die top Dating-Portale für Singles in ${cityData.name}.`,
+      introduction: generatedSections[0].content,
+      images: [cityImage, cityImage2].filter(Boolean),
+      cityInfo: {
+        title: generatedSections[1].title,
+        content: generatedSections[1].content,
+      },
+      sections: generatedSections.slice(2),
       datingSites: [
         {
           name: "Parship",
@@ -162,16 +204,20 @@ serve(async (req) => {
     const expiresAt = new Date();
     expiresAt.setMonth(expiresAt.getMonth() + 6);
 
-    const { error: insertError } = await supabase
-      .from("content_cache")
-      .upsert({
-        cache_key: cacheKey,
-        content: finalContent,
-        expires_at: expiresAt.toISOString(),
-      });
+    try {
+      const { error: insertError } = await supabase
+        .from("content_cache")
+        .upsert({
+          cache_key: cacheKey,
+          content: finalContent,
+          expires_at: expiresAt.toISOString(),
+        });
 
-    if (insertError) {
-      console.error("Cache insertion error:", insertError);
+      if (insertError) {
+        console.error("Cache insertion error:", insertError);
+      }
+    } catch (cacheError) {
+      console.error("Error updating cache:", cacheError);
     }
 
     return new Response(
