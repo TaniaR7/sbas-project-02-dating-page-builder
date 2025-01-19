@@ -171,15 +171,23 @@ async function generateCityContent(cityData: CityData): Promise<CacheContent> {
     },
     {
       title: `Die besten Orte, um andere Singles zu treffen`,
-      prompt: `List and describe the best places in ${cityData.name} for singles to meet, including popular bars, cafes, cultural venues, and outdoor spaces. Be specific about locations and what makes them good for meeting people.`
+      prompt: `List and describe the best places in ${cityData.name} for singles to meet, including popular bars, cafes, cultural venues, and outdoor spaces. Be specific about locations and what makes them good for meeting people. Use bullet lists where appropriate.`
     },
     {
       title: `Singles in ${cityData.name}`,
-      prompt: `Provide information about the single population in ${cityData.name}, including demographics, age distribution, and interesting statistics about singles in the city.`
+      prompt: `Provide information about the single population in ${cityData.name}, including demographics, age distribution, and interesting statistics about singles in the city. Be concise.`
     },
     {
       title: `Veranstaltungen und Netzwerke für Singles in ${cityData.name}`,
       prompt: `Detail the various events, meetups, and networking opportunities available for singles in ${cityData.name}. Include specific events and organizations that cater to singles.`
+    }
+    {
+      title: `Tipps für erfolgreiches Dating in ${cityData.name}`,
+      prompt: `Give helpful and actionable tips for successful dating in ${cityData.name} considering the regional mentality and customs. Promote authenticity and openness as the keys to success. Share some ${cityData.name} specific insights for more online dating success.`
+    }
+    {
+      title: `Fazit: Warum ${cityData.name} ideal für Singles ist`,
+      prompt: `Provide a summary of the advantages for singles in ${cityData.name}. Encouragement to use the potential of the city and online dating to meet new people. Close with a call-to-action: "Trau dich, ${cityData.name}s Single-Welt zu entdecken!"`
     }
   ];
 
