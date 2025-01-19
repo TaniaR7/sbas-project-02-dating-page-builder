@@ -109,7 +109,7 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini",
+        model: "gpt-4o",
         messages: [
           { role: "system", content: "You are a helpful assistant that generates content for dating websites in German language." },
           { role: "user", content: prompt }
