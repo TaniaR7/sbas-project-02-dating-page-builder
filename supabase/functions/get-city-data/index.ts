@@ -6,6 +6,17 @@ import { marked } from "https://esm.sh/marked@9.1.6";
 const PIXABAY_API_KEY = Deno.env.get("PIXABAY_API_KEY");
 const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
 
+// Define inline styles
+const styles = {
+  h1: "font-size: 34px; font-weight: bold;",
+  h2: "font-size: 30px; font-weight: bold;",
+  h3: "font-size: 26px; font-weight: bold;",
+  h4: "font-size: 22px; font-weight: bold;",
+  h5: "font-size: 20px; font-weight: bold;",
+  h6: "font-size: 18px; font-weight: bold;",
+  p: "font-size: 16px;",
+};
+
 serve(async (req) => {
   console.log("Edge Function started");
 
@@ -175,7 +186,7 @@ serve(async (req) => {
     ];
 
     console.log("Generating content for all sections");
-    const generatedSections = await Promise.all(sections.map(async (section) => {
+    const generatedSections = await Promise.all(sections.map(async (section, index) => {
       try {
         console.log(`Generating content for section: ${section.title}`);
         const gptResponse = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -207,12 +218,32 @@ serve(async (req) => {
         const markdownContent = gptData.choices?.[0]?.message?.content || "No content generated";
         
         try {
-          // Parse markdown to HTML
-          const htmlContent = marked(markdownContent, { 
+          // Parse markdown to HTML and add inline styles
+          let htmlContent = marked(markdownContent, { 
             gfm: true, 
             breaks: true,
             sanitize: true 
           });
+
+          // Add inline styles to HTML elements
+          Object.entries(styles).forEach(([tag, style]) => {
+            const regex = new RegExp(`<${tag}([^>]*)>`, 'g');
+            htmlContent = htmlContent.replace(regex, `<${tag} style="${style}"$1>`);
+          });
+
+          // Special handling for the first section's first paragraph (subtitle)
+          if (index === 0) {
+            const firstParagraphRegex = /<p[^>]*>(.*?)<\/p>/;
+            const match = htmlContent.match(firstParagraphRegex);
+            if (match) {
+              const subtitle = match[1];
+              htmlContent = htmlContent.replace(
+                firstParagraphRegex,
+                `<p style="${styles.p} font-size: 20px; color: #666;">${subtitle}</p>`
+              );
+            }
+          }
+
           return {
             title: section.title,
             content: htmlContent
