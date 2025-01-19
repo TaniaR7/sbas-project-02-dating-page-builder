@@ -81,10 +81,10 @@ serve(async (req) => {
         .eq("cache_key", cacheKey)
         .single();
 
-      if (!cacheError && cachedContent) {
+      if (!cacheError && cachedContent && cachedContent.content) {
         const expiresAt = new Date(cachedContent.expires_at);
         if (expiresAt > new Date()) {
-          console.log("Returning cached content for", citySlug);
+          console.log("Found valid cache for", citySlug);
           return new Response(
             JSON.stringify(cachedContent.content),
             {
@@ -100,6 +100,8 @@ serve(async (req) => {
     }
 
     // If we reach here, we need to generate new content
+    console.log("Generating new content for", citySlug);
+    
     const { data: cityData, error: cityError } = await supabase
       .from("cities")
       .select("name, bundesland")
@@ -117,7 +119,19 @@ serve(async (req) => {
       );
     }
 
-    console.log("Generating new content for", citySlug);
+    // Get city images first to ensure we have them
+    console.log("Fetching images from Pixabay for", cityData.name);
+    let cityImages: string[] = [];
+    try {
+      const [image1, image2] = await Promise.all([
+        getPixabayImage(cityData.name, PIXABAY_API_KEY!),
+        getPixabayImage(`${cityData.name} city`, PIXABAY_API_KEY!)
+      ]);
+      cityImages = [image1, image2].filter(Boolean);
+    } catch (error) {
+      console.error("Error fetching Pixabay images:", error);
+      // Continue with empty images array
+    }
 
     // Generate content for each section
     const sections = [
@@ -143,6 +157,7 @@ serve(async (req) => {
       }
     ];
 
+    console.log("Generating content for all sections");
     const generatedSections = await Promise.all(sections.map(async (section) => {
       try {
         console.log(`Generating content for section: ${section.title}`);
@@ -185,18 +200,14 @@ serve(async (req) => {
       }
     }));
 
-    // Get city images
-    console.log("Fetching images from Pixabay");
-    const cityImage = await getPixabayImage(cityData.name, PIXABAY_API_KEY!);
-    const cityImage2 = await getPixabayImage(`${cityData.name} city`, PIXABAY_API_KEY!);
-
+    // Assemble the final content object
     const finalContent = {
       cityName: cityData.name,
       bundesland: cityData.bundesland,
       title: `Singles in ${cityData.name} - Die besten Dating-Portale ${new Date().getFullYear()}`,
       description: `Entdecke die Dating-Szene in ${cityData.name}. Finde die besten Orte zum Kennenlernen und die top Dating-Portale für Singles in ${cityData.name}.`,
       introduction: generatedSections[0].content,
-      images: [cityImage, cityImage2].filter(Boolean),
+      images: cityImages,
       cityInfo: {
         title: generatedSections[1].title,
         content: generatedSections[1].content,
@@ -220,14 +231,17 @@ serve(async (req) => {
     const expiresAt = new Date();
     expiresAt.setMonth(expiresAt.getMonth() + 6);
 
+    // Cache the content
     try {
-      console.log("Attempting to cache content for", citySlug);
+      console.log("Caching content for", citySlug);
       const { error: insertError } = await supabase
         .from("content_cache")
         .upsert({
           cache_key: cacheKey,
           content: finalContent,
           expires_at: expiresAt.toISOString(),
+        }, {
+          onConflict: 'cache_key'
         });
 
       if (insertError) {
@@ -237,6 +251,7 @@ serve(async (req) => {
       }
     } catch (cacheError) {
       console.error("Error updating cache:", cacheError);
+      // Continue to return content even if caching fails
     }
 
     return new Response(
