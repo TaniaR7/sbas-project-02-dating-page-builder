@@ -74,31 +74,54 @@ const CityTemplate = () => {
           </div>
         </header>
 
-        {/* City Info Section with second image */}
-        <section className="py-16 container mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-            <div>
-              <h2 className="text-3xl font-bold mb-6">{data.cityInfo?.title}</h2>
-              <div className="text-gray-600 mb-4" dangerouslySetInnerHTML={{ __html: data.cityInfo?.content }} />
-            </div>
-            {data.images?.[1] && (
-              <div className="rounded-lg overflow-hidden shadow-lg">
-                <img
-                  src={data.images[1]}
-                  alt={`Leben in ${citySlug}`}
-                  className="w-full h-64 object-cover"
-                />
-              </div>
-            )}
-          </div>
-        </section>
+        {/* Main Content Sections */}
+        <div className="container mx-auto px-4 py-16">
+          {/* Introduction Section */}
+          <section className="mb-16">
+            <h2 className="text-3xl font-bold mb-8">{data.sections[0]?.title}</h2>
+            <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: data.sections[0]?.content }} />
+          </section>
 
-        {/* Dating Sites Section */}
-        <section className="bg-white py-16">
-          <div className="container mx-auto px-4">
-            <h2 className="text-3xl font-bold text-center mb-12">
-              Die besten Dating-Portale in {data.cityName}
-            </h2>
+          {/* City Info Section with second image */}
+          <section className="mb-16">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+              <div>
+                <h2 className="text-3xl font-bold mb-6">{data.sections[1]?.title}</h2>
+                <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: data.sections[1]?.content }} />
+              </div>
+              {data.images?.[1] && (
+                <div className="rounded-lg overflow-hidden shadow-lg">
+                  <img
+                    src={data.images[1]}
+                    alt={`Leben in ${data.cityName}`}
+                    className="w-full h-64 object-cover"
+                  />
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* Meeting Places Section */}
+          <section className="mb-16">
+            <h2 className="text-3xl font-bold mb-8">{data.sections[2]?.title}</h2>
+            <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: data.sections[2]?.content }} />
+          </section>
+
+          {/* Singles Demographics Section */}
+          <section className="mb-16">
+            <h2 className="text-3xl font-bold mb-8">{data.sections[3]?.title}</h2>
+            <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: data.sections[3]?.content }} />
+          </section>
+
+          {/* Events and Networks Section */}
+          <section className="mb-16">
+            <h2 className="text-3xl font-bold mb-8">{data.sections[4]?.title}</h2>
+            <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: data.sections[4]?.content }} />
+          </section>
+
+          {/* Dating Sites Section */}
+          <section className="mb-16">
+            <h2 className="text-3xl font-bold mb-8">{data.sections[5]?.title}</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {data.datingSites?.map((site) => (
                 <Card key={site.name} className="p-6 hover:shadow-lg transition-shadow">
@@ -112,18 +135,20 @@ const CityTemplate = () => {
                 </Card>
               ))}
             </div>
-          </div>
-        </section>
-
-        {/* Additional Sections */}
-        {data.sections?.map((section, index) => (
-          <section key={index} className={`py-16 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
-            <div className="container mx-auto px-4">
-              <h2 className="text-3xl font-bold text-center mb-12">{section.title}</h2>
-              <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: section.content }} />
-            </div>
           </section>
-        ))}
+
+          {/* Dating Tips Section */}
+          <section className="mb-16">
+            <h2 className="text-3xl font-bold mb-8">{data.sections[6]?.title}</h2>
+            <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: data.sections[6]?.content }} />
+          </section>
+
+          {/* Conclusion Section */}
+          <section className="mb-16">
+            <h2 className="text-3xl font-bold mb-8">{data.sections[7]?.title}</h2>
+            <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: data.sections[7]?.content }} />
+          </section>
+        </div>
 
         {/* Footer */}
         <footer className="bg-gray-900 text-white py-12">

@@ -180,11 +180,15 @@ async function generateCityContent(cityData: CityData): Promise<CacheContent> {
     {
       title: `Veranstaltungen und Netzwerke für Singles in ${cityData.name}`,
       prompt: `Detail the various events, meetups, and networking opportunities available for singles in ${cityData.name}. Include specific events and organizations that cater to singles.`
-    }
+    },
+    {
+      title: `Die besten Dating-Portale in ${cityData.name}`,
+      prompt: `Describe the most popular and effective dating platforms specifically for ${cityData.name}. Include success rates, user demographics, and specific features that make them good for dating in ${cityData.name}.`
+    },
     {
       title: `Tipps für erfolgreiches Dating in ${cityData.name}`,
       prompt: `Give helpful and actionable tips for successful dating in ${cityData.name} considering the regional mentality and customs. Promote authenticity and openness as the keys to success. Share some ${cityData.name} specific insights for more online dating success.`
-    }
+    },
     {
       title: `Fazit: Warum ${cityData.name} ideal für Singles ist`,
       prompt: `Provide a summary of the advantages for singles in ${cityData.name}. Encouragement to use the potential of the city and online dating to meet new people. Close with a call-to-action: "Trau dich, ${cityData.name}s Single-Welt zu entdecken!"`
