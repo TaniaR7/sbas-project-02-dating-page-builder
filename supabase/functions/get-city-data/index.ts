@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders, getPixabayImage } from "../_shared/pixabay.ts";
+import { marked } from "https://esm.sh/marked@9.1.6";
 
 const PIXABAY_API_KEY = Deno.env.get("PIXABAY_API_KEY");
 const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
@@ -8,14 +9,12 @@ const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
 serve(async (req) => {
   console.log("Edge Function started");
 
-  // Always handle CORS preflight requests first
   if (req.method === "OPTIONS") {
     console.log("Handling CORS preflight request");
     return new Response("ok", { headers: corsHeaders });
   }
 
   try {
-    // Validate required environment variables
     if (!OPENAI_API_KEY) {
       console.error("OpenAI API key not configured");
       throw new Error("OpenAI API key not configured");
@@ -96,7 +95,6 @@ serve(async (req) => {
       }
     } catch (cacheError) {
       console.error("Error checking cache:", cacheError);
-      // Continue execution to generate new content
     }
 
     // If we reach here, we need to generate new content
@@ -130,7 +128,6 @@ serve(async (req) => {
       cityImages = [image1, image2].filter(Boolean);
     } catch (error) {
       console.error("Error fetching Pixabay images:", error);
-      // Continue with empty images array
     }
 
     // Generate content for each section
@@ -170,7 +167,7 @@ serve(async (req) => {
           body: JSON.stringify({
             model: "gpt-4o",
             messages: [
-              { role: "system", content: "You are a helpful assistant that generates content for dating websites in German language." },
+              { role: "system", content: "You are a helpful assistant that generates content for dating websites in German language. Always use markdown formatting for better readability." },
               { role: "user", content: section.prompt }
             ],
             temperature: 0.7,
@@ -187,10 +184,26 @@ serve(async (req) => {
         }
 
         const gptData = await gptResponse.json();
-        return {
-          title: section.title,
-          content: gptData.choices?.[0]?.message?.content || "No content generated"
-        };
+        const markdownContent = gptData.choices?.[0]?.message?.content || "No content generated";
+        
+        try {
+          // Parse markdown to HTML
+          const htmlContent = marked(markdownContent, { 
+            gfm: true, 
+            breaks: true,
+            sanitize: true 
+          });
+          return {
+            title: section.title,
+            content: htmlContent
+          };
+        } catch (parseError) {
+          console.error(`Error parsing markdown for section ${section.title}:`, parseError);
+          return {
+            title: section.title,
+            content: markdownContent // Return raw content if parsing fails
+          };
+        }
       } catch (error) {
         console.error(`Error generating content for section ${section.title}:`, error);
         return {
