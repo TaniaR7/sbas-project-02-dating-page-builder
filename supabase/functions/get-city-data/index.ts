@@ -9,20 +9,34 @@ const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
 serve(async (req) => {
   console.log("Edge Function started");
 
+  // Always handle CORS preflight requests first
   if (req.method === "OPTIONS") {
     console.log("Handling CORS preflight request");
     return new Response("ok", { headers: corsHeaders });
   }
 
   try {
+    // Validate required environment variables
     if (!OPENAI_API_KEY) {
       console.error("OpenAI API key not configured");
-      throw new Error("OpenAI API key not configured");
+      return new Response(
+        JSON.stringify({ error: "OpenAI API key not configured" }),
+        { 
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
+        }
+      );
     }
 
     if (!PIXABAY_API_KEY) {
       console.error("Pixabay API key not configured");
-      throw new Error("Pixabay API key not configured");
+      return new Response(
+        JSON.stringify({ error: "Pixabay API key not configured" }),
+        { 
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
+        }
+      );
     }
 
     const hasBody = req.headers.get("content-length") !== "0" && 
@@ -48,7 +62,13 @@ serve(async (req) => {
 
       if (citiesError) {
         console.error("Error fetching cities:", citiesError);
-        throw new Error("Failed to fetch cities");
+        return new Response(
+          JSON.stringify({ error: "Failed to fetch cities" }),
+          { 
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" }
+          }
+        );
       }
 
       const cityCards = cities?.map(city => ({
@@ -165,7 +185,7 @@ serve(async (req) => {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            model: "gpt-4o",
+            model: "gpt-4",
             messages: [
               { role: "system", content: "You are a helpful assistant that generates content for dating websites in German language. Always use markdown formatting for better readability." },
               { role: "user", content: section.prompt }
