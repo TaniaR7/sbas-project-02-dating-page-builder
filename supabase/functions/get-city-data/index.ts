@@ -6,21 +6,35 @@ const PIXABAY_API_KEY = Deno.env.get("PIXABAY_API_KEY");
 const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
 
 serve(async (req) => {
+  console.log("Edge Function started");
+
   // Always handle CORS preflight requests first
   if (req.method === "OPTIONS") {
+    console.log("Handling CORS preflight request");
     return new Response("ok", { headers: corsHeaders });
   }
 
   try {
-    const hasBody = req.headers.get("content-length") !== "0" && req.headers.get("content-type")?.includes("application/json");
+    // Validate required environment variables
+    if (!OPENAI_API_KEY) {
+      console.error("OpenAI API key not configured");
+      throw new Error("OpenAI API key not configured");
+    }
+
+    if (!PIXABAY_API_KEY) {
+      console.error("Pixabay API key not configured");
+      throw new Error("Pixabay API key not configured");
+    }
+
+    const hasBody = req.headers.get("content-length") !== "0" && 
+                    req.headers.get("content-type")?.includes("application/json");
     
     let citySlug;
     if (hasBody) {
       const body = await req.json();
       citySlug = body.citySlug;
+      console.log("Processing request for city:", citySlug);
     }
-
-    console.log("Processing request for city:", citySlug);
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_ANON_KEY")!;
@@ -60,24 +74,29 @@ serve(async (req) => {
     const cacheKey = `/singles/${citySlug}`;
     console.log("Checking cache for key:", cacheKey);
     
-    const { data: cachedContent, error: cacheError } = await supabase
-      .from("content_cache")
-      .select("content, expires_at")
-      .eq("cache_key", cacheKey)
-      .single();
+    try {
+      const { data: cachedContent, error: cacheError } = await supabase
+        .from("content_cache")
+        .select("content, expires_at")
+        .eq("cache_key", cacheKey)
+        .single();
 
-    if (!cacheError && cachedContent) {
-      const expiresAt = new Date(cachedContent.expires_at);
-      if (expiresAt > new Date()) {
-        console.log("Returning cached content for", citySlug);
-        return new Response(
-          JSON.stringify(cachedContent.content),
-          {
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          }
-        );
+      if (!cacheError && cachedContent) {
+        const expiresAt = new Date(cachedContent.expires_at);
+        if (expiresAt > new Date()) {
+          console.log("Returning cached content for", citySlug);
+          return new Response(
+            JSON.stringify(cachedContent.content),
+            {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            }
+          );
+        }
+        console.log("Cache expired for", citySlug);
       }
-      console.log("Cache expired for", citySlug);
+    } catch (cacheError) {
+      console.error("Error checking cache:", cacheError);
+      // Continue execution to generate new content
     }
 
     // If we reach here, we need to generate new content
@@ -124,12 +143,9 @@ serve(async (req) => {
       }
     ];
 
-    if (!OPENAI_API_KEY) {
-      throw new Error("OpenAI API key not configured");
-    }
-
     const generatedSections = await Promise.all(sections.map(async (section) => {
       try {
+        console.log(`Generating content for section: ${section.title}`);
         const gptResponse = await fetch("https://api.openai.com/v1/chat/completions", {
           method: "POST",
           headers: {
@@ -205,6 +221,7 @@ serve(async (req) => {
     expiresAt.setMonth(expiresAt.getMonth() + 6);
 
     try {
+      console.log("Attempting to cache content for", citySlug);
       const { error: insertError } = await supabase
         .from("content_cache")
         .upsert({
@@ -215,6 +232,8 @@ serve(async (req) => {
 
       if (insertError) {
         console.error("Cache insertion error:", insertError);
+      } else {
+        console.log("Successfully cached content for", citySlug);
       }
     } catch (cacheError) {
       console.error("Error updating cache:", cacheError);
