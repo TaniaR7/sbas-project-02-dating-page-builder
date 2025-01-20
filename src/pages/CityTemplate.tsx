@@ -20,13 +20,9 @@ const CityTemplate = () => {
       try {
         console.log('Fetching data for city:', citySlug);
         const body = { citySlug };
-        console.log('Request body:', JSON.stringify(body));
         
         const { data, error } = await supabase.functions.invoke("get-city-data", {
           body,
-          headers: {
-            'Content-Type': 'application/json',
-          },
         });
 
         if (error) {
@@ -222,7 +218,6 @@ const CityTemplate = () => {
       </div>
     </>
   );
-
 };
 
 export default CityTemplate;
