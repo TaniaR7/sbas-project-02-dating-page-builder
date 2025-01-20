@@ -20,24 +20,24 @@ const CityTemplate = () => {
       try {
         console.log('Fetching data for city:', citySlug);
         
-        const { data, error } = await supabase.functions.invoke("get-city-data", {
-          body: { citySlug },
+        const { data: functionData, error: functionError } = await supabase.functions.invoke("get-city-data", {
+          body: JSON.stringify({ citySlug }), // Properly stringify the body
           headers: {
             'Content-Type': 'application/json',
           },
         });
 
-        if (error) {
-          console.error('Supabase function error:', error);
-          throw error;
+        if (functionError) {
+          console.error('Supabase function error:', functionError);
+          throw functionError;
         }
 
-        if (!data) {
+        if (!functionData) {
           throw new Error('Keine Daten von der Funktion zurückgegeben');
         }
 
-        console.log('Received data:', data);
-        return data;
+        console.log('Received data:', functionData);
+        return functionData;
       } catch (err) {
         console.error('Error fetching city data:', err);
         toast({
@@ -48,7 +48,7 @@ const CityTemplate = () => {
         throw err;
       }
     },
-    retry: 2, // Increase retries to handle temporary network issues
+    retry: 3, // Increase retries for better reliability
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000), // Exponential backoff
     enabled: !!citySlug,
   });
