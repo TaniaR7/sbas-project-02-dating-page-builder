@@ -251,8 +251,11 @@ serve(async (req) => {
     // Parse and validate request body
     let citySlug: string;
     try {
-      const body = await req.json();
-      console.log("Received request body:", body);
+      const text = await req.text();
+      console.log("Raw request body:", text);
+      
+      const body = JSON.parse(text);
+      console.log("Parsed request body:", body);
       
       if (!body || typeof body !== 'object') {
         throw new Error("Invalid request body format");
