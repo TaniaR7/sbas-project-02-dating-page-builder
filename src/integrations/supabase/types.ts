@@ -60,6 +60,27 @@ export type Database = {
         }
         Relationships: []
       }
+      page_cache: {
+        Row: {
+          created_at: string
+          html_content: string
+          id: number
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          html_content: string
+          id?: number
+          url: string
+        }
+        Update: {
+          created_at?: string
+          html_content?: string
+          id?: number
+          url?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
