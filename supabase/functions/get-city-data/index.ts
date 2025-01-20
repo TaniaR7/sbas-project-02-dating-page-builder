@@ -164,7 +164,7 @@ async function generateCityContent(cityData: CityData): Promise<CacheContent> {
   const sections = [
     {
       title: `${cityData.name} – Die Stadt der Singles`,
-      prompt: `Write a welcoming introduction about singles in ${cityData.name}, focusing on the city's appeal for singles and dating. Include why ${cityData.name} is an exciting place for singles.`
+      prompt: `Write a welcoming introduction about singles in ${cityData.name}, focusing on the city's appeal for singles and dating. Include why ${cityData.name} is an exciting place for singles. Do not write a conclsion.`
     },
     {
       title: `${cityData.name}: Eine Stadt für Lebensfreude und Begegnungen`,
@@ -181,10 +181,6 @@ async function generateCityContent(cityData: CityData): Promise<CacheContent> {
     {
       title: `Veranstaltungen und Netzwerke für Singles in ${cityData.name}`,
       prompt: `Detail the various events, meetups, and networking opportunities available for singles in ${cityData.name}. Include specific events and organizations that cater to singles.`
-    },
-    {
-      title: `Die besten Dating-Portale in ${cityData.name}`,
-      prompt: `Describe the most popular and effective dating platforms specifically for ${cityData.name}. Include success rates, user demographics, and specific features that make them good for dating in ${cityData.name}.`
     },
     {
       title: `Tipps für erfolgreiches Dating in ${cityData.name}`,
