@@ -19,10 +19,12 @@ const CityTemplate = () => {
 
       try {
         console.log('Fetching data for city:', citySlug);
-        const body = { citySlug };
         
         const { data, error } = await supabase.functions.invoke("get-city-data", {
-          body,
+          body: { citySlug },
+          headers: {
+            'Content-Type': 'application/json',
+          },
         });
 
         if (error) {
@@ -46,7 +48,8 @@ const CityTemplate = () => {
         throw err;
       }
     },
-    retry: 1,
+    retry: 2, // Increase retries to handle temporary network issues
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000), // Exponential backoff
     enabled: !!citySlug,
   });
 
