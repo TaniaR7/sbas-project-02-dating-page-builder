@@ -222,7 +222,6 @@ async function generateCityContent(cityData: CityData): Promise<CacheContent> {
   };
 }
 
-// Main request handler
 serve(async (req) => {
   console.log("Edge Function started");
 
@@ -259,12 +258,13 @@ serve(async (req) => {
     const cachedContent = await checkPageCache(supabase, cacheKey);
     
     if (cachedContent) {
+      console.log("Cache hit for", cacheKey);
       return new Response(
         cachedContent,
         {
           headers: { 
             ...corsHeaders, 
-            "Content-Type": "text/html" 
+            "Content-Type": "application/json" 
           },
         }
       );
@@ -280,6 +280,7 @@ serve(async (req) => {
       .single();
 
     if (cityError || !cityData) {
+      console.error("City not found:", citySlug);
       return new Response(
         JSON.stringify({ error: "City not found" }),
         {
@@ -292,42 +293,18 @@ serve(async (req) => {
     const content = await generateCityContent(cityData);
     
     // Convert content to HTML and cache it
-    const htmlContent = `
-      <!DOCTYPE html>
-      <html lang="de">
-        <head>
-          <meta charset="UTF-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>${content.title}</title>
-          <meta name="description" content="${content.description}">
-          <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
-          <style>
-            body {
-              font-family: 'Montserrat', sans-serif;
-              color: #3b4040;
-              background-color: #eee;
-            }
-            .highlight {
-              color: #d10014;
-            }
-          </style>
-        </head>
-        <body>
-          ${content.introduction}
-          ${content.sections.map(section => `
-            <section>
-              <h2>${section.title}</h2>
-              ${section.content}
-            </section>
-          `).join('')}
-        </body>
-      </html>
-    `;
+    const htmlContent = JSON.stringify(content);
 
-    await updatePageCache(supabase, cacheKey, htmlContent);
+    try {
+      await updatePageCache(supabase, cacheKey, htmlContent);
+      console.log("Successfully cached content for", cacheKey);
+    } catch (error) {
+      console.error("Error caching content:", error);
+      // Continue even if caching fails
+    }
 
     return new Response(
-      JSON.stringify(content),
+      htmlContent,
       {
         headers: { 
           ...corsHeaders, 
