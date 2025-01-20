@@ -4,7 +4,6 @@ import { corsHeaders } from "../_shared/cors.ts";
 import { getPixabayImage } from "../_shared/pixabay.ts";
 import { marked } from "https://esm.sh/marked@9.1.6";
 
-// Types
 interface CityData {
   name: string;
   bundesland: string;
@@ -248,7 +247,18 @@ serve(async (req) => {
         JSON.stringify({ error: "Invalid request body" }),
         { 
           status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" }
+          headers: corsHeaders
+        }
+      );
+    }
+
+    if (!citySlug) {
+      console.error("No city slug provided");
+      return new Response(
+        JSON.stringify({ error: "City slug is required" }),
+        { 
+          status: 400,
+          headers: corsHeaders
         }
       );
     }
@@ -262,10 +272,7 @@ serve(async (req) => {
       return new Response(
         cachedContent,
         {
-          headers: { 
-            ...corsHeaders, 
-            "Content-Type": "application/json" 
-          },
+          headers: corsHeaders
         }
       );
     }
@@ -285,14 +292,12 @@ serve(async (req) => {
         JSON.stringify({ error: "City not found" }),
         {
           status: 404,
-          headers: { ...corsHeaders, "Content-Type": "application/json" }
+          headers: corsHeaders
         }
       );
     }
 
     const content = await generateCityContent(cityData);
-    
-    // Convert content to HTML and cache it
     const htmlContent = JSON.stringify(content);
 
     try {
@@ -306,10 +311,7 @@ serve(async (req) => {
     return new Response(
       htmlContent,
       {
-        headers: { 
-          ...corsHeaders, 
-          "Content-Type": "application/json" 
-        },
+        headers: corsHeaders
       }
     );
 
@@ -321,10 +323,7 @@ serve(async (req) => {
         details: error.message
       }),
       {
-        headers: { 
-          ...corsHeaders, 
-          "Content-Type": "application/json" 
-        },
+        headers: corsHeaders,
         status: 500,
       }
     );
