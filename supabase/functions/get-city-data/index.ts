@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { corsHeaders, getPixabayImage } from "../_shared/pixabay.ts";
+import { corsHeaders } from "../_shared/cors.ts";
+import { getPixabayImage } from "../_shared/pixabay.ts";
 import { marked } from "https://esm.sh/marked@9.1.6";
 
 // Type definitions for better code organization
@@ -236,9 +237,15 @@ async function generateCityContent(cityData: CityData): Promise<CacheContent> {
 serve(async (req) => {
   console.log("Edge Function started");
 
+  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     console.log("Handling CORS preflight request");
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", { 
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'text/plain'
+      }
+    });
   }
 
   try {
@@ -298,7 +305,10 @@ serve(async (req) => {
       return new Response(
         JSON.stringify(cachedContent),
         {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          headers: { 
+            ...corsHeaders, 
+            "Content-Type": "application/json" 
+          },
         }
       );
     }
@@ -322,7 +332,10 @@ serve(async (req) => {
     return new Response(
       JSON.stringify(content),
       {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { 
+          ...corsHeaders, 
+          "Content-Type": "application/json" 
+        },
       }
     );
 
@@ -334,7 +347,10 @@ serve(async (req) => {
         details: error.message
       }),
       {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { 
+          ...corsHeaders, 
+          "Content-Type": "application/json" 
+        },
         status: 500,
       }
     );
