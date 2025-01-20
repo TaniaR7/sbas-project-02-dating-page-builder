@@ -4,18 +4,13 @@ import { corsHeaders } from "../_shared/cors.ts";
 import { getPixabayImage } from "../_shared/pixabay.ts";
 import { marked } from "https://esm.sh/marked@9.1.6";
 
-// Type definitions for better code organization
-interface Section {
-  title: string;
-  prompt: string;
-}
-
+// Types
 interface CityData {
   name: string;
   bundesland: string;
 }
 
-interface GeneratedSection {
+interface Section {
   title: string;
   content: string;
 }
@@ -27,11 +22,7 @@ interface CacheContent {
   description: string;
   introduction: string;
   images: string[];
-  cityInfo: {
-    title: string;
-    content: string;
-  };
-  sections: GeneratedSection[];
+  sections: Section[];
   datingSites: Array<{
     name: string;
     description: string;
@@ -47,69 +38,70 @@ const createSupabaseClient = () => {
 };
 
 const getStyles = () => ({
-  h1: "font-size: 34px; font-weight: bold;",
-  h2: "font-size: 30px; font-weight: bold;",
-  h3: "font-size: 26px; font-weight: bold;",
-  h4: "font-size: 22px; font-weight: bold;",
-  h5: "font-size: 20px; font-weight: bold;",
-  h6: "font-size: 18px; font-weight: bold;",
-  p: "font-size: 16px;",
+  h1: "text-4xl font-bold mb-6",
+  h2: "text-3xl font-bold mb-6",
+  h3: "text-2xl font-bold mb-4",
+  p: "text-lg mb-4",
+  ul: "list-disc pl-6 mb-4",
+  li: "mb-2",
 });
 
-// Cache management functions
-async function checkCache(supabase: any, cacheKey: string) {
-  console.log("Checking cache for key:", cacheKey);
+// Cache management
+async function checkPageCache(supabase: any, url: string): Promise<string | null> {
+  console.log("Checking page cache for URL:", url);
   try {
-    const { data: cachedContent, error: cacheError } = await supabase
-      .from("content_cache")
-      .select("content, expires_at")
-      .eq("cache_key", cacheKey)
+    const { data: cachedPage, error } = await supabase
+      .from("page_cache")
+      .select("html_content")
+      .eq("url", url)
       .single();
 
-    if (!cacheError && cachedContent && cachedContent.content) {
-      const expiresAt = new Date(cachedContent.expires_at);
-      if (expiresAt > new Date()) {
-        console.log("Found valid cache for", cacheKey);
-        return cachedContent.content;
-      }
-      console.log("Cache expired for", cacheKey);
+    if (error) {
+      console.error("Error checking page cache:", error);
+      return null;
     }
+
+    if (cachedPage) {
+      console.log("Cache hit for URL:", url);
+      return cachedPage.html_content;
+    }
+
+    console.log("Cache miss for URL:", url);
     return null;
   } catch (error) {
-    console.error("Error checking cache:", error);
+    console.error("Error in checkPageCache:", error);
     return null;
   }
 }
 
-async function updateCache(supabase: any, cacheKey: string, content: any) {
-  const expiresAt = new Date();
-  expiresAt.setMonth(expiresAt.getMonth() + 6);
-
+async function updatePageCache(supabase: any, url: string, htmlContent: string) {
+  console.log("Updating page cache for URL:", url);
   try {
-    const { error: insertError } = await supabase
-      .from("content_cache")
+    const { error } = await supabase
+      .from("page_cache")
       .upsert({
-        cache_key: cacheKey,
-        content,
-        expires_at: expiresAt.toISOString(),
+        url,
+        html_content: htmlContent,
       }, {
-        onConflict: 'cache_key'
+        onConflict: 'url'
       });
 
-    if (insertError) {
-      console.error("Cache insertion error:", insertError);
-    } else {
-      console.log("Successfully cached content for", cacheKey);
+    if (error) {
+      console.error("Error updating page cache:", error);
+      throw error;
     }
+
+    console.log("Successfully updated page cache for URL:", url);
   } catch (error) {
-    console.error("Error updating cache:", error);
+    console.error("Error in updatePageCache:", error);
+    throw error;
   }
 }
 
-// Content generation functions
-async function generateSectionContent(section: Section): Promise<GeneratedSection> {
+// Content generation
+async function generateSectionContent(section: { title: string, prompt: string }): Promise<Section> {
+  console.log(`Generating content for section: ${section.title}`);
   try {
-    console.log(`Generating content for section: ${section.title}`);
     const gptResponse = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -119,7 +111,10 @@ async function generateSectionContent(section: Section): Promise<GeneratedSectio
       body: JSON.stringify({
         model: "gpt-4o-mini",
         messages: [
-          { role: "system", content: "You are a helpful dating assistant that generates SEO optimized content for dating websites in German language. Always use markdown formatting for better readability." },
+          { 
+            role: "system", 
+            content: "You are a helpful dating assistant that generates SEO optimized content for dating websites in German language. Always use markdown formatting for better readability." 
+          },
           { role: "user", content: section.prompt }
         ],
         temperature: 0.7,
@@ -144,7 +139,7 @@ async function generateSectionContent(section: Section): Promise<GeneratedSectio
     // Add inline styles to HTML elements
     Object.entries(styles).forEach(([tag, style]) => {
       const regex = new RegExp(`<${tag}([^>]*)>`, 'g');
-      htmlContent = htmlContent.replace(regex, `<${tag} style="${style}"$1>`);
+      htmlContent = htmlContent.replace(regex, `<${tag} class="${style}"$1>`);
     });
 
     return {
@@ -155,12 +150,14 @@ async function generateSectionContent(section: Section): Promise<GeneratedSectio
     console.error(`Error generating content for section ${section.title}:`, error);
     return {
       title: section.title,
-      content: `Error generating content: ${error.message}`
+      content: `<p class="text-red-500">Error generating content: ${error.message}</p>`
     };
   }
 }
 
 async function generateCityContent(cityData: CityData): Promise<CacheContent> {
+  console.log("Generating content for city:", cityData.name);
+  
   const sections = [
     {
       title: `${cityData.name} – Die Stadt der Singles`,
@@ -209,11 +206,7 @@ async function generateCityContent(cityData: CityData): Promise<CacheContent> {
     description: `Entdecke die Dating-Szene in ${cityData.name}. Finde die besten Orte zum Kennenlernen und die top Dating-Portale für Singles in ${cityData.name}.`,
     introduction: generatedSections[0].content,
     images: cityImages.filter(Boolean),
-    cityInfo: {
-      title: generatedSections[1].title,
-      content: generatedSections[1].content,
-    },
-    sections: generatedSections.slice(2),
+    sections: generatedSections.slice(1),
     datingSites: [
       {
         name: "Parship",
@@ -235,24 +228,10 @@ serve(async (req) => {
 
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
-    console.log("Handling CORS preflight request");
-    return new Response("ok", { 
-      headers: {
-        ...corsHeaders,
-        'Content-Type': 'text/plain'
-      }
-    });
+    return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    // Validate environment variables
-    const requiredEnvVars = ['OPENAI_API_KEY', 'PIXABAY_API_KEY'];
-    for (const envVar of requiredEnvVars) {
-      if (!Deno.env.get(envVar)) {
-        throw new Error(`${envVar} not configured`);
-      }
-    }
-
     const supabase = createSupabaseClient();
     
     // Parse request body
@@ -275,46 +254,17 @@ serve(async (req) => {
       );
     }
 
-    // Handle homepage request
-    if (!citySlug) {
-      const { data: cities, error: citiesError } = await supabase
-        .from("cities")
-        .select("name, bundesland, slug")
-        .limit(6);
-
-      if (citiesError) {
-        throw new Error("Failed to fetch cities");
-      }
-
-      const cityCards = cities?.map(city => ({
-        title: `Singles in ${city.name}`,
-        description: `Entdecke die Dating-Szene in ${city.name}`,
-        bundesland: city.bundesland,
-        link: `/singles/${city.slug}`
-      })) || [];
-
-      return new Response(
-        JSON.stringify({
-          websiteContext: "Entdecke mit Singlebörsen-aktuell.de tolle Singles in deiner Nähe!",
-          cityCards
-        }),
-        {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
-    }
-
     // Check cache first
     const cacheKey = `/singles/${citySlug}`;
-    const cachedContent = await checkCache(supabase, cacheKey);
+    const cachedContent = await checkPageCache(supabase, cacheKey);
     
     if (cachedContent) {
       return new Response(
-        JSON.stringify(cachedContent),
+        cachedContent,
         {
           headers: { 
             ...corsHeaders, 
-            "Content-Type": "application/json" 
+            "Content-Type": "text/html" 
           },
         }
       );
@@ -340,7 +290,41 @@ serve(async (req) => {
     }
 
     const content = await generateCityContent(cityData);
-    await updateCache(supabase, cacheKey, content);
+    
+    // Convert content to HTML and cache it
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html lang="de">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>${content.title}</title>
+          <meta name="description" content="${content.description}">
+          <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+          <style>
+            body {
+              font-family: 'Montserrat', sans-serif;
+              color: #3b4040;
+              background-color: #eee;
+            }
+            .highlight {
+              color: #d10014;
+            }
+          </style>
+        </head>
+        <body>
+          ${content.introduction}
+          ${content.sections.map(section => `
+            <section>
+              <h2>${section.title}</h2>
+              ${section.content}
+            </section>
+          `).join('')}
+        </body>
+      </html>
+    `;
+
+    await updatePageCache(supabase, cacheKey, htmlContent);
 
     return new Response(
       JSON.stringify(content),
