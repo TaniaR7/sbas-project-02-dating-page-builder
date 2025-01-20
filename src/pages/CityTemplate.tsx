@@ -4,18 +4,46 @@ import { Helmet } from "react-helmet";
 import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/components/ui/use-toast";
 
 const CityTemplate = () => {
   const { citySlug } = useParams<{ citySlug: string }>();
+  const { toast } = useToast();
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['cityContent', citySlug],
     queryFn: async () => {
-      const { data } = await supabase.functions.invoke("get-city-data", {
-        body: { citySlug },
-      });
-      return data;
+      try {
+        console.log('Fetching data for city:', citySlug);
+        const { data, error } = await supabase.functions.invoke("get-city-data", {
+          body: { citySlug },
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (error) {
+          console.error('Supabase function error:', error);
+          throw error;
+        }
+
+        if (!data) {
+          throw new Error('No data returned from function');
+        }
+
+        console.log('Received data:', data);
+        return data;
+      } catch (err) {
+        console.error('Error fetching city data:', err);
+        toast({
+          title: "Fehler beim Laden",
+          description: "Die Stadtdaten konnten nicht geladen werden. Bitte versuchen Sie es später erneut.",
+          variant: "destructive",
+        });
+        throw err;
+      }
     },
+    retry: 1,
   });
 
   if (isLoading) {
@@ -29,7 +57,7 @@ const CityTemplate = () => {
   if (error) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-red-500">Error loading content</div>
+        <div className="text-red-500">Fehler beim Laden der Inhalte</div>
       </div>
     );
   }
@@ -37,12 +65,11 @@ const CityTemplate = () => {
   if (!data) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-gray-500">City not found</div>
+        <div className="text-gray-500">Stadt nicht gefunden</div>
       </div>
     );
   }
 
-  // Extract the plain text from the HTML content
   const stripHtml = (html: string) => {
     const tmp = document.createElement('div');
     tmp.innerHTML = html;
@@ -187,6 +214,7 @@ const CityTemplate = () => {
       </div>
     </>
   );
+
 };
 
 export default CityTemplate;

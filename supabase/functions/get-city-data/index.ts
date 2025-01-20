@@ -226,7 +226,13 @@ serve(async (req) => {
 
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { 
+      headers: {
+        ...corsHeaders,
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+      }
+    });
   }
 
   try {
@@ -235,8 +241,7 @@ serve(async (req) => {
     // Parse request body
     let citySlug;
     try {
-      if (req.headers.get("content-length") !== "0" && 
-          req.headers.get("content-type")?.includes("application/json")) {
+      if (req.headers.get("content-type")?.includes("application/json")) {
         const body = await req.json();
         citySlug = body.citySlug;
         console.log("Processing request for city:", citySlug);
@@ -247,7 +252,7 @@ serve(async (req) => {
         JSON.stringify({ error: "Invalid request body" }),
         { 
           status: 400,
-          headers: corsHeaders
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         }
       );
     }
@@ -258,7 +263,7 @@ serve(async (req) => {
         JSON.stringify({ error: "City slug is required" }),
         { 
           status: 400,
-          headers: corsHeaders
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         }
       );
     }
@@ -323,7 +328,7 @@ serve(async (req) => {
         details: error.message
       }),
       {
-        headers: corsHeaders,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,
       }
     );
