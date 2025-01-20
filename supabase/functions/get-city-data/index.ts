@@ -239,17 +239,29 @@ serve(async (req) => {
     const supabase = createSupabaseClient();
     
     // Parse request body
-    let citySlug;
+    if (!req.body) {
+      console.error("No request body provided");
+      return new Response(
+        JSON.stringify({ error: "Request body is required" }),
+        { 
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
+    let citySlug: string | undefined;
     try {
-      if (req.headers.get("content-type")?.includes("application/json")) {
-        const body = await req.json();
-        citySlug = body.citySlug;
-        console.log("Processing request for city:", citySlug);
-      }
+      const body = await req.json();
+      citySlug = body.citySlug;
+      console.log("Received request for city:", citySlug);
     } catch (error) {
       console.error("Error parsing request body:", error);
       return new Response(
-        JSON.stringify({ error: "Invalid request body" }),
+        JSON.stringify({ 
+          error: "Invalid request body",
+          details: error.message 
+        }),
         { 
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -258,7 +270,7 @@ serve(async (req) => {
     }
 
     if (!citySlug) {
-      console.error("No city slug provided");
+      console.error("No city slug provided in request body");
       return new Response(
         JSON.stringify({ error: "City slug is required" }),
         { 
@@ -321,7 +333,7 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error("Error:", error);
+    console.error("Unexpected error:", error);
     return new Response(
       JSON.stringify({ 
         error: "An unexpected error occurred", 

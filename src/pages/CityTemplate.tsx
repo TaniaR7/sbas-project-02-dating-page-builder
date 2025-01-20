@@ -4,7 +4,7 @@ import { Helmet } from "react-helmet";
 import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 
 const CityTemplate = () => {
   const { citySlug } = useParams<{ citySlug: string }>();
@@ -13,10 +13,14 @@ const CityTemplate = () => {
   const { data, isLoading, error } = useQuery({
     queryKey: ['cityContent', citySlug],
     queryFn: async () => {
+      if (!citySlug) {
+        throw new Error('Stadt-URL ist erforderlich');
+      }
+
       try {
         console.log('Fetching data for city:', citySlug);
         const { data, error } = await supabase.functions.invoke("get-city-data", {
-          body: { citySlug },
+          body: JSON.stringify({ citySlug }),
           headers: {
             'Content-Type': 'application/json',
           },
@@ -28,7 +32,7 @@ const CityTemplate = () => {
         }
 
         if (!data) {
-          throw new Error('No data returned from function');
+          throw new Error('Keine Daten von der Funktion zurückgegeben');
         }
 
         console.log('Received data:', data);
@@ -44,6 +48,7 @@ const CityTemplate = () => {
       }
     },
     retry: 1,
+    enabled: !!citySlug,
   });
 
   if (isLoading) {
