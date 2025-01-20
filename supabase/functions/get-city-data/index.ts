@@ -254,14 +254,25 @@ serve(async (req) => {
     }
 
     const supabase = createSupabaseClient();
-    const hasBody = req.headers.get("content-length") !== "0" && 
-                    req.headers.get("content-type")?.includes("application/json");
     
+    // Parse request body
     let citySlug;
-    if (hasBody) {
-      const body = await req.json();
-      citySlug = body.citySlug;
-      console.log("Processing request for city:", citySlug);
+    try {
+      if (req.headers.get("content-length") !== "0" && 
+          req.headers.get("content-type")?.includes("application/json")) {
+        const body = await req.json();
+        citySlug = body.citySlug;
+        console.log("Processing request for city:", citySlug);
+      }
+    } catch (error) {
+      console.error("Error parsing request body:", error);
+      return new Response(
+        JSON.stringify({ error: "Invalid request body" }),
+        { 
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
+        }
+      );
     }
 
     // Handle homepage request
@@ -319,7 +330,13 @@ serve(async (req) => {
       .single();
 
     if (cityError || !cityData) {
-      throw new Error("City not found");
+      return new Response(
+        JSON.stringify({ error: "City not found" }),
+        {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
+        }
+      );
     }
 
     const content = await generateCityContent(cityData);
