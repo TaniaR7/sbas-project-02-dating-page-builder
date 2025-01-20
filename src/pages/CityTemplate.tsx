@@ -57,7 +57,7 @@ const CityTemplate = () => {
       </Helmet>
 
       <div className="min-h-screen bg-gray-50">
-        {/* Hero Section with first image */}
+        {/* Hero Section */}
         <header className="bg-primary py-20 text-white relative overflow-hidden">
           {data.images?.[0] && (
             <div className="absolute inset-0">
@@ -72,9 +72,6 @@ const CityTemplate = () => {
             <h1 className="text-4xl md:text-5xl font-bold mb-6">
               Singles in {data.cityName} finden
             </h1>
-            <p className="text-xl mb-8 max-w-2xl mx-auto text-white/90">
-              {stripHtml(data.introduction)}
-            </p>
             <Button size="lg" variant="secondary" className="bg-white text-primary hover:bg-gray-100">
               Jetzt Dating-Portal finden
             </Button>
@@ -85,15 +82,17 @@ const CityTemplate = () => {
         <div className="container mx-auto px-4 py-16">
           {/* Introduction Section */}
           <section className="mb-16">
-            <h2 className="text-3xl font-bold mb-8">{data.sections[0]?.title}</h2>
-            <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: data.sections[0]?.content }} />
+            <h2 className="text-3xl font-bold mb-8">{data.cityName} – Die Stadt der Singles</h2>
+            <div className="prose max-w-none">
+              <p className="text-xl mb-8">{stripHtml(data.introduction)}</p>
+            </div>
           </section>
 
           {/* City Info Section with second image */}
           <section className="mb-16">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
               <div>
-                <h2 className="text-3xl font-bold mb-6">{data.sections[1]?.title}</h2>
+                <h2 className="text-3xl font-bold mb-6">{data.cityName}: Eine Stadt für Lebensfreude und Begegnungen</h2>
                 <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: data.sections[1]?.content }} />
               </div>
               {data.images?.[1] && (
