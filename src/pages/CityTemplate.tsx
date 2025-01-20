@@ -42,6 +42,13 @@ const CityTemplate = () => {
     );
   }
 
+  // Extract the plain text from the HTML content
+  const stripHtml = (html: string) => {
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html;
+    return tmp.textContent || tmp.innerText || '';
+  };
+
   return (
     <>
       <Helmet>
@@ -65,8 +72,8 @@ const CityTemplate = () => {
             <h1 className="text-4xl md:text-5xl font-bold mb-6">
               Singles in {data.cityName} finden
             </h1>
-            <p className="text-xl mb-8 max-w-2xl mx-auto">
-              {data.introduction}
+            <p className="text-xl mb-8 max-w-2xl mx-auto text-white/90">
+              {stripHtml(data.introduction)}
             </p>
             <Button size="lg" variant="secondary" className="bg-white text-primary hover:bg-gray-100">
               Jetzt Dating-Portal finden
