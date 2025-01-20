@@ -245,25 +245,27 @@ serve(async (req) => {
   try {
     console.log('Received request:', req.method, req.url);
     
-    // Ensure request has a body
-    const requestBody = await req.text();
-    if (!requestBody) {
-      console.error('Empty request body received');
+    // Validate request body
+    if (!req.body) {
+      console.error('No request body received');
       throw new Error('Request body is required');
     }
 
     // Parse the request body
     let body;
+    const bodyText = await req.text();
+    console.log('Raw request body:', bodyText);
+
     try {
-      body = JSON.parse(requestBody);
+      body = JSON.parse(bodyText);
       console.log('Parsed request body:', body);
     } catch (error) {
       console.error('Error parsing request body:', error);
       throw new Error('Invalid JSON in request body');
     }
 
-    if (!body.citySlug) {
-      console.error('Missing citySlug in request body');
+    if (!body?.citySlug) {
+      console.error('Missing citySlug in request body:', body);
       throw new Error('citySlug is required in request body');
     }
 
