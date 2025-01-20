@@ -222,27 +222,25 @@ async function generateCityContent(cityData: CityData): Promise<CacheContent> {
 }
 
 serve(async (req) => {
-  console.log("Edge Function started");
-
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { 
-      headers: {
-        ...corsHeaders,
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-      }
+      headers: corsHeaders 
     });
   }
 
   try {
+    console.log("Edge Function started");
     const supabase = createSupabaseClient();
     
-    // Parse request body
+    // Validate request
     if (!req.body) {
       console.error("No request body provided");
       return new Response(
-        JSON.stringify({ error: "Request body is required" }),
+        JSON.stringify({ 
+          error: "Request body is required",
+          details: "Request body cannot be empty" 
+        }),
         { 
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -250,11 +248,22 @@ serve(async (req) => {
       );
     }
 
-    let citySlug: string | undefined;
+    // Parse and validate request body
+    let citySlug: string;
     try {
       const body = await req.json();
+      console.log("Received request body:", body);
+      
+      if (!body || typeof body !== 'object') {
+        throw new Error("Invalid request body format");
+      }
+      
+      if (!body.citySlug || typeof body.citySlug !== 'string') {
+        throw new Error("City slug must be a string");
+      }
+      
       citySlug = body.citySlug;
-      console.log("Received request for city:", citySlug);
+      console.log("Processing request for city:", citySlug);
     } catch (error) {
       console.error("Error parsing request body:", error);
       return new Response(
@@ -339,9 +348,9 @@ serve(async (req) => {
         error: "An unexpected error occurred", 
         details: error.message
       }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      { 
         status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     );
   }

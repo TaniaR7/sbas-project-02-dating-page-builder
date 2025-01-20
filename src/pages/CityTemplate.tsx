@@ -19,8 +19,11 @@ const CityTemplate = () => {
 
       try {
         console.log('Fetching data for city:', citySlug);
+        const requestBody = { citySlug };
+        console.log('Request body:', requestBody);
+        
         const { data, error } = await supabase.functions.invoke("get-city-data", {
-          body: JSON.stringify({ citySlug }),
+          body: JSON.stringify(requestBody),
           headers: {
             'Content-Type': 'application/json',
           },
