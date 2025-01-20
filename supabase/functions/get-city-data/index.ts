@@ -112,7 +112,7 @@ async function generateSectionContent(section: { title: string, prompt: string }
         messages: [
           { 
             role: "system", 
-            content: "You are a helpful dating assistant that generates SEO optimized content for dating websites in German language. Always use markdown formatting for better readability." 
+            content: "You are a helpful dating assistant that generates SEO optimized content for dating websites in German language. Always use markdown formatting for better readability. Use short paragraphs with a maximum of 120 words per paragraph." 
           },
           { role: "user", content: section.prompt }
         ],
