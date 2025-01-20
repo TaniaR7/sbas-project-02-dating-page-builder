@@ -21,7 +21,7 @@ const CityTemplate = () => {
         console.log('Fetching data for city:', citySlug);
         
         const { data: functionData, error: functionError } = await supabase.functions.invoke("get-city-data", {
-          body: JSON.stringify({ citySlug }), // Properly stringify the body
+          body: { citySlug }, // Send as an object, Supabase will handle stringification
           headers: {
             'Content-Type': 'application/json',
           },
@@ -48,8 +48,8 @@ const CityTemplate = () => {
         throw err;
       }
     },
-    retry: 3, // Increase retries for better reliability
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000), // Exponential backoff
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
     enabled: !!citySlug,
   });
 
