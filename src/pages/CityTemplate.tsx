@@ -123,23 +123,23 @@ const CityTemplate = () => {
           </section>
 
           {/* City Info Section with second image */}
-          <section className="mb-16">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-              <div>
-                <h2 className="text-3xl font-bold mb-6">2. {data.cityName}: Eine Stadt für Lebensfreude und Begegnungen</h2>
-                <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: data.sections[1]?.content }} />
-              </div>
-              {data.images?.[1] && (
-                <div className="rounded-lg overflow-hidden shadow-lg">
-                  <img
-                    src={data.images[1]}
-                    alt={`Leben in ${data.cityName}`}
-                    className="w-full h-64 object-cover"
-                  />
-                </div>
-              )}
-            </div>
-          </section>
+<section className="mb-16">
+<div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+<div>
+<h2 className="text-3xl font-bold mb-6">2. {data.cityName}: Eine Stadt für Lebensfreude und Begegnungen</h2>
+<div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: data.sections[1]?.content }} />
+</div>
+{data.images?.[1] && (
+<div className="rounded-lg overflow-hidden shadow-lg">
+<img
+src={data.images[1]}
+alt={Leben in ${data.cityName}}
+className="w-full h-64 object-cover"
+/>
+</div>
+)}
+</div>
+</section>
 
           {/* Meeting Places Section */}
           <section className="mb-16">
