@@ -63,21 +63,18 @@ export type Database = {
       page_cache: {
         Row: {
           created_at: string
-          expires_at: string | null
           html_content: string
           id: number
           url: string
         }
         Insert: {
           created_at?: string
-          expires_at?: string | null
           html_content: string
           id?: number
           url: string
         }
         Update: {
           created_at?: string
-          expires_at?: string | null
           html_content?: string
           id?: number
           url?: string
