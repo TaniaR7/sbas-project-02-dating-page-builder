@@ -245,19 +245,44 @@ serve(async (req) => {
   try {
     console.log('Received request:', req.method, req.url);
     
-    // Get the request body as JSON directly
     let body;
     try {
-      body = await req.json();
+      const text = await req.text();
+      console.log('Raw request body:', text);
+      body = JSON.parse(text);
       console.log('Parsed request body:', body);
     } catch (error) {
       console.error('Error parsing request body:', error);
-      throw new Error('Invalid JSON in request body');
+      return new Response(
+        JSON.stringify({
+          error: 'Invalid JSON in request body',
+          details: error.message
+        }),
+        {
+          status: 400,
+          headers: {
+            ...corsHeaders,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
     }
 
     if (!body?.citySlug) {
       console.error('Missing citySlug in request body:', body);
-      throw new Error('citySlug is required in request body');
+      return new Response(
+        JSON.stringify({
+          error: 'citySlug is required in request body',
+          receivedBody: body
+        }),
+        {
+          status: 400,
+          headers: {
+            ...corsHeaders,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
     }
 
     // Check cache first
