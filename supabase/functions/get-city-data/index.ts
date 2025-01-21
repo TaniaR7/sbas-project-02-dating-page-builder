@@ -249,13 +249,7 @@ async function generateCityContent(cityData: CityData, citySlug: string, supabas
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { 
-      headers: { 
-        ...corsHeaders,
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Access-Control-Max-Age': '86400',
-      } 
-    });
+    return new Response(null, { headers: corsHeaders });
   }
 
   try {
@@ -273,9 +267,9 @@ serve(async (req) => {
     }
 
     const supabase = createSupabaseClient();
+    const cacheUrl = `/singles/${citySlug}`;
 
     // Check cache first
-    const cacheUrl = `/singles/${citySlug}`;
     const cachedContent = await checkCacheValid(supabase, cacheUrl);
     
     if (cachedContent) {
@@ -300,7 +294,7 @@ serve(async (req) => {
       throw new Error(cityError?.message || 'City not found');
     }
 
-    // Generate content
+    // Generate new content
     const content = await generateCityContent(cityData, citySlug, supabase);
     const htmlContent = JSON.stringify(content);
     
