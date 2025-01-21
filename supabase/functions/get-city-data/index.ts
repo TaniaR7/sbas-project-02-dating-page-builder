@@ -29,7 +29,100 @@ interface CacheContent {
   }>;
 }
 
-// Utility functions
+serve(async (req) => {
+  console.log("Edge Function started, method:", req.method);
+  
+  // Handle CORS preflight requests
+  if (req.method === "OPTIONS") {
+    return new Response(null, { 
+      headers: {
+        ...corsHeaders,
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      }
+    });
+  }
+
+  try {
+    if (req.method !== "POST") {
+      throw new Error(`HTTP method ${req.method} is not allowed`);
+    }
+
+    console.log("Creating Supabase client");
+    const supabase = createSupabaseClient();
+    
+    console.log("Parsing request body");
+    const { citySlug } = await req.json();
+    console.log("Received citySlug:", citySlug);
+
+    if (!citySlug || typeof citySlug !== 'string') {
+      throw new Error("City slug is required and must be a string");
+    }
+
+    // Check cache first
+    console.log("Checking cache for", citySlug);
+    const cacheKey = `/singles/${citySlug}`;
+    const cachedContent = await checkPageCache(supabase, cacheKey);
+    
+    if (cachedContent) {
+      console.log("Cache hit for", cacheKey);
+      return new Response(cachedContent, {
+        headers: { 
+          ...corsHeaders,
+          'Content-Type': 'application/json'
+        }
+      });
+    }
+
+    // Generate new content if cache miss
+    console.log("Cache miss, generating new content for", citySlug);
+    
+    const { data: cityData, error: cityError } = await supabase
+      .from("cities")
+      .select("name, bundesland")
+      .eq("slug", citySlug)
+      .single();
+
+    if (cityError || !cityData) {
+      console.error("City not found:", citySlug);
+      throw new Error("City not found");
+    }
+
+    const content = await generateCityContent(cityData);
+    const htmlContent = JSON.stringify(content);
+
+    try {
+      await updatePageCache(supabase, cacheKey, htmlContent);
+      console.log("Successfully cached content for", cacheKey);
+    } catch (error) {
+      console.error("Error caching content:", error);
+      // Continue even if caching fails
+    }
+
+    return new Response(htmlContent, {
+      headers: { 
+        ...corsHeaders,
+        'Content-Type': 'application/json'
+      }
+    });
+
+  } catch (error) {
+    console.error("Edge function error:", error);
+    return new Response(
+      JSON.stringify({ 
+        error: error.message || "An unexpected error occurred",
+        details: error.stack || "No stack trace available"
+      }),
+      { 
+        status: 400,
+        headers: { 
+          ...corsHeaders,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+  }
+});
+
 const createSupabaseClient = () => {
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const supabaseKey = Deno.env.get("SUPABASE_ANON_KEY")!;
@@ -230,125 +323,3 @@ async function generateCityContent(cityData: CityData): Promise<CacheContent> {
     ]
   };
 }
-
-serve(async (req) => {
-  // Handle CORS preflight requests
-  if (req.method === "OPTIONS") {
-    return new Response(null, { 
-      headers: corsHeaders 
-    });
-  }
-
-  try {
-    console.log("Edge Function started");
-    const supabase = createSupabaseClient();
-    
-    if (!req.body) {
-      console.error("No request body provided");
-      return new Response(
-        JSON.stringify({ 
-          error: "Request body is required" 
-        }),
-        { 
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      );
-    }
-
-    // Parse and validate request body
-    let citySlug: string;
-    try {
-      const body = await req.json();
-      console.log("Received request body:", body);
-      
-      if (!body || typeof body !== 'object') {
-        throw new Error("Invalid request body format");
-      }
-      
-      if (!body.citySlug || typeof body.citySlug !== 'string') {
-        throw new Error("City slug must be a string");
-      }
-      
-      citySlug = body.citySlug;
-      console.log("Processing request for city:", citySlug);
-    } catch (error) {
-      console.error("Error parsing request body:", error);
-      return new Response(
-        JSON.stringify({ 
-          error: "Invalid request body",
-          details: error.message 
-        }),
-        { 
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      );
-    }
-
-    // Check cache first
-    const cacheKey = `/singles/${citySlug}`;
-    const cachedContent = await checkPageCache(supabase, cacheKey);
-    
-    if (cachedContent) {
-      console.log("Cache hit for", cacheKey);
-      return new Response(
-        cachedContent,
-        {
-          headers: corsHeaders
-        }
-      );
-    }
-
-    // Generate new content if cache miss
-    console.log("Generating new content for", citySlug);
-    
-    const { data: cityData, error: cityError } = await supabase
-      .from("cities")
-      .select("name, bundesland")
-      .eq("slug", citySlug)
-      .single();
-
-    if (cityError || !cityData) {
-      console.error("City not found:", citySlug);
-      return new Response(
-        JSON.stringify({ error: "City not found" }),
-        {
-          status: 404,
-          headers: corsHeaders
-        }
-      );
-    }
-
-    const content = await generateCityContent(cityData);
-    const htmlContent = JSON.stringify(content);
-
-    try {
-      await updatePageCache(supabase, cacheKey, htmlContent);
-      console.log("Successfully cached content for", cacheKey);
-    } catch (error) {
-      console.error("Error caching content:", error);
-      // Continue even if caching fails
-    }
-
-    return new Response(
-      htmlContent,
-      {
-        headers: corsHeaders
-      }
-    );
-
-  } catch (error) {
-    console.error("Unexpected error:", error);
-    return new Response(
-      JSON.stringify({ 
-        error: "An unexpected error occurred", 
-        details: error.message
-      }),
-      { 
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      }
-    );
-  }
-});
