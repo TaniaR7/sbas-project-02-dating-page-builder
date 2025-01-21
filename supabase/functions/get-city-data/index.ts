@@ -281,7 +281,7 @@ serve(async (req) => {
     if (cachedContent) {
       console.log('Returning cached content for:', cacheUrl);
       return new Response(cachedContent, {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders }
       });
     }
 
@@ -305,7 +305,7 @@ serve(async (req) => {
     await updateCache(supabase, cacheUrl, htmlContent);
     
     return new Response(htmlContent, {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      headers: { ...corsHeaders }
     });
 
   } catch (error) {
@@ -317,7 +317,7 @@ serve(async (req) => {
       }),
       { 
         status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders }
       }
     );
   }
