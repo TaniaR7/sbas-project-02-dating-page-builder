@@ -21,7 +21,7 @@ const CityTemplate = () => {
         console.log('Fetching data for city:', citySlug);
         
         const { data: functionData, error: functionError } = await supabase.functions.invoke("get-city-data", {
-          body: { citySlug }, // Send as an object, Supabase will handle stringification
+          body: JSON.stringify({ citySlug }), // Explicitly stringify the body
           headers: {
             'Content-Type': 'application/json',
           },
@@ -141,7 +141,6 @@ const CityTemplate = () => {
             </div>
           </section>
 
-          {/* Meeting Places Section */}
           <section className="mb-16">
             <h2 className="text-3xl font-bold mb-8">3. {data.sections[2]?.title}</h2>
             <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: data.sections[2]?.content }} />
@@ -188,6 +187,7 @@ const CityTemplate = () => {
             <h2 className="text-3xl font-bold mb-8">8. {data.sections[7]?.title}</h2>
             <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: data.sections[7]?.content }} />
           </section>
+
         </div>
 
         {/* Footer */}
