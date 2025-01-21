@@ -4,7 +4,6 @@ import { corsHeaders } from "../_shared/cors.ts";
 import { getPixabayImage } from "../_shared/pixabay.ts";
 import { marked } from "https://esm.sh/marked@9.1.6";
 
-// Utility functions
 const createSupabaseClient = () => {
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -281,10 +280,7 @@ serve(async (req) => {
     if (cachedContent) {
       console.log('Returning cached content for:', cacheUrl);
       return new Response(cachedContent, {
-        headers: { 
-          ...corsHeaders,
-          'Content-Type': 'application/json'
-        }
+        headers: { ...corsHeaders }
       });
     }
 
@@ -313,10 +309,7 @@ serve(async (req) => {
     }
     
     return new Response(htmlContent, {
-      headers: { 
-        ...corsHeaders,
-        'Content-Type': 'application/json'
-      }
+      headers: { ...corsHeaders }
     });
 
   } catch (error) {
@@ -328,10 +321,7 @@ serve(async (req) => {
       }),
       { 
         status: 400,
-        headers: { 
-          ...corsHeaders,
-          'Content-Type': 'application/json'
-        }
+        headers: { ...corsHeaders }
       }
     );
   }
