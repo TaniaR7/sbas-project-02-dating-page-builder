@@ -247,9 +247,7 @@ serve(async (req) => {
     
     let body;
     try {
-      const text = await req.text();
-      console.log('Raw request body:', text);
-      body = JSON.parse(text);
+      body = await req.json();
       console.log('Parsed request body:', body);
     } catch (error) {
       console.error('Error parsing request body:', error);
