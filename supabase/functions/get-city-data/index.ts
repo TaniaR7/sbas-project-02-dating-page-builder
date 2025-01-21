@@ -56,7 +56,7 @@ const checkCacheValid = async (supabase: any, url: string): Promise<string | nul
       .select("html_content")
       .eq("url", url)
       .gt("expires_at", new Date().toISOString())
-      .single();
+      .maybeSingle();
 
     if (error) {
       console.error("Error checking cache:", error);
@@ -281,7 +281,10 @@ serve(async (req) => {
     if (cachedContent) {
       console.log('Returning cached content for:', cacheUrl);
       return new Response(cachedContent, {
-        headers: { ...corsHeaders }
+        headers: { 
+          ...corsHeaders,
+          'Content-Type': 'application/json'
+        }
       });
     }
 
@@ -290,7 +293,7 @@ serve(async (req) => {
       .from("cities")
       .select("name, bundesland")
       .eq("slug", citySlug)
-      .single();
+      .maybeSingle();
 
     if (cityError || !cityData) {
       console.error('Error fetching city data:', cityError);
@@ -301,11 +304,19 @@ serve(async (req) => {
     const content = await generateCityContent(cityData, citySlug, supabase);
     const htmlContent = JSON.stringify(content);
     
-    // Update cache
-    await updateCache(supabase, cacheUrl, htmlContent);
+    try {
+      // Update cache
+      await updateCache(supabase, cacheUrl, htmlContent);
+    } catch (cacheError) {
+      console.error('Cache update error:', cacheError);
+      // Continue even if cache update fails
+    }
     
     return new Response(htmlContent, {
-      headers: { ...corsHeaders }
+      headers: { 
+        ...corsHeaders,
+        'Content-Type': 'application/json'
+      }
     });
 
   } catch (error) {
@@ -317,7 +328,10 @@ serve(async (req) => {
       }),
       { 
         status: 400,
-        headers: { ...corsHeaders }
+        headers: { 
+          ...corsHeaders,
+          'Content-Type': 'application/json'
+        }
       }
     );
   }
