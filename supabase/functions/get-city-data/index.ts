@@ -234,58 +234,61 @@ async function generateCityContent(cityData: CityData): Promise<CacheContent> {
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
-    return new Response(null, {
-      headers: {
-        ...corsHeaders,
-        'Access-Control-Max-Age': '86400',
-      }
+    return new Response(null, { 
+      headers: corsHeaders 
     });
   }
 
   try {
-    console.log('Received request:', req.method, req.url);
+    console.log("Edge Function started");
+    const supabase = createSupabaseClient();
     
-    let body;
-    try {
-      body = await req.json();
-      console.log('Parsed request body:', body);
-    } catch (error) {
-      console.error('Error parsing request body:', error);
+    if (!req.body) {
+      console.error("No request body provided");
       return new Response(
-        JSON.stringify({
-          error: 'Invalid JSON in request body',
-          details: error.message
+        JSON.stringify({ 
+          error: "Request body is required" 
         }),
-        {
+        { 
           status: 400,
-          headers: {
-            ...corsHeaders,
-            'Content-Type': 'application/json'
-          }
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         }
       );
     }
 
-    if (!body?.citySlug) {
-      console.error('Missing citySlug in request body:', body);
+    // Parse and validate request body
+    let citySlug: string;
+    try {
+      const body = await req.json();
+      console.log("Received request body:", body);
+      
+      if (!body || typeof body !== 'object') {
+        throw new Error("Invalid request body format");
+      }
+      
+      if (!body.citySlug || typeof body.citySlug !== 'string') {
+        throw new Error("City slug must be a string");
+      }
+      
+      citySlug = body.citySlug;
+      console.log("Processing request for city:", citySlug);
+    } catch (error) {
+      console.error("Error parsing request body:", error);
       return new Response(
-        JSON.stringify({
-          error: 'citySlug is required in request body',
-          receivedBody: body
+        JSON.stringify({ 
+          error: "Invalid request body",
+          details: error.message 
         }),
-        {
+        { 
           status: 400,
-          headers: {
-            ...corsHeaders,
-            'Content-Type': 'application/json'
-          }
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         }
       );
     }
 
     // Check cache first
-    const cacheKey = `/singles/${body.citySlug}`;
-    const cachedContent = await checkPageCache(createSupabaseClient(), cacheKey);
+    const cacheKey = `/singles/${citySlug}`;
+    const cachedContent = await checkPageCache(supabase, cacheKey);
     
     if (cachedContent) {
       console.log("Cache hit for", cacheKey);
@@ -298,16 +301,16 @@ serve(async (req) => {
     }
 
     // Generate new content if cache miss
-    console.log("Generating new content for", body.citySlug);
+    console.log("Generating new content for", citySlug);
     
-    const { data: cityData, error: cityError } = await createSupabaseClient()
+    const { data: cityData, error: cityError } = await supabase
       .from("cities")
       .select("name, bundesland")
-      .eq("slug", body.citySlug)
+      .eq("slug", citySlug)
       .single();
 
     if (cityError || !cityData) {
-      console.error("City not found:", body.citySlug);
+      console.error("City not found:", citySlug);
       return new Response(
         JSON.stringify({ error: "City not found" }),
         {
@@ -321,7 +324,7 @@ serve(async (req) => {
     const htmlContent = JSON.stringify(content);
 
     try {
-      await updatePageCache(createSupabaseClient(), cacheKey, htmlContent);
+      await updatePageCache(supabase, cacheKey, htmlContent);
       console.log("Successfully cached content for", cacheKey);
     } catch (error) {
       console.error("Error caching content:", error);
@@ -331,26 +334,20 @@ serve(async (req) => {
     return new Response(
       htmlContent,
       {
-        headers: {
-          ...corsHeaders,
-          'Content-Type': 'application/json',
-          'Cache-Control': 'public, max-age=3600',
-        },
+        headers: corsHeaders
       }
     );
+
   } catch (error) {
-    console.error('Error in edge function:', error);
+    console.error("Unexpected error:", error);
     return new Response(
-      JSON.stringify({
-        error: error.message,
-        details: error.stack
+      JSON.stringify({ 
+        error: "An unexpected error occurred", 
+        details: error.message
       }),
-      {
-        status: 400,
-        headers: {
-          ...corsHeaders,
-          'Content-Type': 'application/json'
-        }
+      { 
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     );
   }
