@@ -11,6 +11,43 @@ const createSupabaseClient = () => {
   return createClient(supabaseUrl, supabaseKey);
 };
 
+async function downloadAndStoreImage(imageUrl: string, citySlug: string, index: number, supabase: any): Promise<string> {
+  try {
+    console.log(`Downloading image from ${imageUrl} for ${citySlug}`);
+    const response = await fetch(imageUrl);
+    if (!response.ok) throw new Error(`Failed to download image: ${response.statusText}`);
+
+    const blob = await response.blob();
+    const fileExt = imageUrl.split('.').pop()?.toLowerCase() || 'jpg';
+    const fileName = `${citySlug}-${index}.${fileExt}`;
+    const filePath = `${citySlug}/${fileName}`;
+
+    const { data: uploadData, error: uploadError } = await supabase
+      .storage
+      .from('city_images')
+      .upload(filePath, blob, {
+        contentType: `image/${fileExt}`,
+        upsert: true
+      });
+
+    if (uploadError) {
+      console.error('Error uploading image:', uploadError);
+      return imageUrl; // Fallback to original URL if upload fails
+    }
+
+    const { data: { publicUrl } } = supabase
+      .storage
+      .from('city_images')
+      .getPublicUrl(filePath);
+
+    console.log(`Successfully stored image at ${publicUrl}`);
+    return publicUrl;
+  } catch (error) {
+    console.error('Error in downloadAndStoreImage:', error);
+    return imageUrl; // Fallback to original URL if process fails
+  }
+}
+
 const checkCacheValid = async (supabase: any, url: string): Promise<string | null> => {
   console.log("Checking cache for URL:", url);
   try {
@@ -77,58 +114,6 @@ const getStyles = () => ({
   li: "mb-2",
 });
 
-// Cache management
-async function checkPageCache(supabase: any, url: string): Promise<string | null> {
-  console.log("Checking page cache for URL:", url);
-  try {
-    const { data: cachedPage, error } = await supabase
-      .from("page_cache")
-      .select("html_content")
-      .eq("url", url)
-      .single();
-
-    if (error) {
-      console.error("Error checking page cache:", error);
-      return null;
-    }
-
-    if (cachedPage) {
-      console.log("Cache hit for URL:", url);
-      return cachedPage.html_content;
-    }
-
-    console.log("Cache miss for URL:", url);
-    return null;
-  } catch (error) {
-    console.error("Error in checkPageCache:", error);
-    return null;
-  }
-}
-
-async function updatePageCache(supabase: any, url: string, htmlContent: string) {
-  console.log("Updating page cache for URL:", url);
-  try {
-    const { error } = await supabase
-      .from("page_cache")
-      .upsert({
-        url,
-        html_content: htmlContent,
-      }, {
-        onConflict: 'url'
-      });
-
-    if (error) {
-      console.error("Error updating page cache:", error);
-      throw error;
-    }
-
-    console.log("Successfully updated page cache for URL:", url);
-  } catch (error) {
-    console.error("Error in updatePageCache:", error);
-    throw error;
-  }
-}
-
 // Content generation
 async function generateSectionContent(section: { title: string, prompt: string }): Promise<Section> {
   console.log(`Generating content for section: ${section.title}`);
@@ -186,7 +171,7 @@ async function generateSectionContent(section: { title: string, prompt: string }
   }
 }
 
-async function generateCityContent(cityData: CityData): Promise<CacheContent> {
+async function generateCityContent(cityData: CityData, citySlug: string, supabase: any): Promise<CacheContent> {
   console.log("Generating content for city:", cityData.name);
   
   const sections = [
@@ -223,12 +208,20 @@ async function generateCityContent(cityData: CityData): Promise<CacheContent> {
   console.log("Generating content for all sections");
   const generatedSections = await Promise.all(sections.map(generateSectionContent));
 
-  // Get city images
+  // Get and store city images
   console.log("Fetching images from Pixabay for", cityData.name);
-  const cityImages = await Promise.all([
+  const pixabayImages = await Promise.all([
     getPixabayImage(cityData.name, Deno.env.get("PIXABAY_API_KEY")!),
     getPixabayImage(`${cityData.name} city`, Deno.env.get("PIXABAY_API_KEY")!)
   ]);
+
+  // Store images in Supabase storage
+  const storedImages = await Promise.all(
+    pixabayImages
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((imageUrl, index) => downloadAndStoreImage(imageUrl, citySlug, index + 1, supabase))
+  );
 
   return {
     cityName: cityData.name,
@@ -236,7 +229,7 @@ async function generateCityContent(cityData: CityData): Promise<CacheContent> {
     title: `Singles in ${cityData.name} - Die besten Dating-Portale ${new Date().getFullYear()}`,
     description: `Entdecke die Dating-Szene in ${cityData.name}. Finde die besten Orte zum Kennenlernen und die top Dating-Portale für Singles in ${cityData.name}.`,
     introduction: generatedSections[0].content,
-    images: cityImages.filter(Boolean),
+    images: storedImages,
     sections: generatedSections.slice(1),
     datingSites: [
       {
@@ -297,19 +290,10 @@ serve(async (req) => {
       throw new Error("City not found");
     }
 
-    // Get city images only once
-    console.log("Fetching images from Pixabay for", cityData.name);
-    const cityImages = await Promise.all([
-      getPixabayImage(cityData.name, Deno.env.get("PIXABAY_API_KEY")!),
-      getPixabayImage(`${cityData.name} city`, Deno.env.get("PIXABAY_API_KEY")!)
-    ]);
-
-    // Generate content with error handling for each section
+    // Generate content with error handling
     let content;
     try {
-      content = await generateCityContent(cityData);
-      content.images = cityImages.filter(Boolean).slice(0, 2); // Only use first two valid images
-      
+      content = await generateCityContent(cityData, citySlug, supabase);
       const htmlContent = JSON.stringify(content);
       await updateCache(supabase, cacheUrl, htmlContent);
       
@@ -325,7 +309,7 @@ serve(async (req) => {
         bundesland: cityData.bundesland,
         title: `Singles in ${cityData.name} - Die besten Dating-Portale ${new Date().getFullYear()}`,
         description: `Entdecke die Dating-Szene in ${cityData.name}. Finde die besten Orte zum Kennenlernen und die top Dating-Portale für Singles in ${cityData.name}.`,
-        images: cityImages.filter(Boolean).slice(0, 2),
+        images: [],
         introduction: `<p>Willkommen in ${cityData.name}! Entdecken Sie die vielfältige Dating-Szene unserer Stadt.</p>`,
         sections: [],
         datingSites: [
