@@ -32,7 +32,6 @@ interface CacheContent {
 serve(async (req) => {
   console.log("Edge Function started, method:", req.method);
   
-  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { 
       headers: {
@@ -61,20 +60,32 @@ serve(async (req) => {
     // Check cache first
     console.log("Checking cache for", citySlug);
     const cacheKey = `/singles/${citySlug}`;
-    const cachedContent = await checkPageCache(supabase, cacheKey);
-    
-    if (cachedContent) {
-      console.log("Cache hit for", cacheKey);
-      return new Response(cachedContent, {
-        headers: { 
-          ...corsHeaders,
-          'Content-Type': 'application/json'
-        }
-      });
+    const { data: cachedPage, error: cacheError } = await supabase
+      .from("page_cache")
+      .select("html_content, expires_at")
+      .eq("url", cacheKey)
+      .single();
+
+    if (cacheError) {
+      console.error("Cache check error:", cacheError);
+    } else if (cachedPage) {
+      const now = new Date();
+      const expiresAt = new Date(cachedPage.expires_at);
+      
+      if (now < expiresAt) {
+        console.log("Valid cache found for", cacheKey);
+        return new Response(cachedPage.html_content, {
+          headers: { 
+            ...corsHeaders,
+            'Content-Type': 'application/json'
+          }
+        });
+      }
+      console.log("Cache expired for", cacheKey);
     }
 
-    // Generate new content if cache miss
-    console.log("Cache miss, generating new content for", citySlug);
+    // Generate new content if cache miss or expired
+    console.log("Generating new content for", citySlug);
     
     const { data: cityData, error: cityError } = await supabase
       .from("cities")
@@ -84,18 +95,33 @@ serve(async (req) => {
 
     if (cityError || !cityData) {
       console.error("City not found:", citySlug);
-      throw new Error("City not found");
+      throw new Error("Stadt nicht gefunden");
     }
 
     const content = await generateCityContent(cityData);
     const htmlContent = JSON.stringify(content);
 
     try {
-      await updatePageCache(supabase, cacheKey, htmlContent);
-      console.log("Successfully cached content for", cacheKey);
+      const expiresAt = new Date();
+      expiresAt.setMonth(expiresAt.getMonth() + 6);
+
+      const { error: upsertError } = await supabase
+        .from("page_cache")
+        .upsert({
+          url: cacheKey,
+          html_content: htmlContent,
+          expires_at: expiresAt.toISOString()
+        }, {
+          onConflict: 'url'
+        });
+
+      if (upsertError) {
+        console.error("Error caching content:", upsertError);
+      } else {
+        console.log("Successfully cached content for", cacheKey);
+      }
     } catch (error) {
-      console.error("Error caching content:", error);
-      // Continue even if caching fails
+      console.error("Error in cache update:", error);
     }
 
     return new Response(htmlContent, {
@@ -109,8 +135,8 @@ serve(async (req) => {
     console.error("Edge function error:", error);
     return new Response(
       JSON.stringify({ 
-        error: error.message || "An unexpected error occurred",
-        details: error.stack || "No stack trace available"
+        error: error.message || "Ein unerwarteter Fehler ist aufgetreten",
+        details: error.stack || "Kein Stack-Trace verfügbar"
       }),
       { 
         status: 400,

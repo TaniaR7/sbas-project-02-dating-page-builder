@@ -29,7 +29,7 @@ const CityTemplate = () => {
 
         if (error) {
           console.error('Supabase function error:', error);
-          throw error;
+          throw new Error(error.message || 'Fehler beim Laden der Stadtdaten');
         }
 
         if (!data) {
@@ -42,7 +42,7 @@ const CityTemplate = () => {
         console.error('Error fetching city data:', err);
         toast({
           title: "Fehler beim Laden",
-          description: "Die Stadtdaten konnten nicht geladen werden. Bitte versuchen Sie es später erneut.",
+          description: err instanceof Error ? err.message : "Die Stadtdaten konnten nicht geladen werden. Bitte versuchen Sie es später erneut.",
           variant: "destructive",
         });
         throw err;
@@ -62,8 +62,16 @@ const CityTemplate = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-red-500">Fehler beim Laden der Inhalte</div>
+      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center gap-4">
+        <div className="text-red-500 text-xl">
+          {error instanceof Error ? error.message : "Fehler beim Laden der Inhalte"}
+        </div>
+        <Button 
+          onClick={() => window.location.reload()} 
+          variant="outline"
+        >
+          Erneut versuchen
+        </Button>
       </div>
     );
   }
@@ -71,7 +79,7 @@ const CityTemplate = () => {
   if (!data) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-gray-500">Stadt nicht gefunden</div>
+        <div className="text-gray-500 text-xl">Stadt nicht gefunden</div>
       </div>
     );
   }
