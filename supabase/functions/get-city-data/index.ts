@@ -198,16 +198,6 @@ async function generateCityContent(cityData: CityData): Promise<CacheContent> {
     getPixabayImage(`${cityData.name} city`, Deno.env.get("PIXABAY_API_KEY")!)
   ]);
 
-  // Modify section 2 content to include the image with proper styling
-  if (generatedSections[1] && cityImages[1]) {
-    const imageHtml = `<img src="${cityImages[1]}" alt="Leben in ${cityData.name}" style="float: left; margin-right: 20px; margin-bottom: 20px; max-width: 400px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);" />`;
-    const contentParts = generatedSections[1].content.split('</p>');
-    const firstParagraph = contentParts[0] + '</p>';
-    const remainingParagraphs = contentParts.slice(1).join('</p>');
-    
-    generatedSections[1].content = `${firstParagraph}${imageHtml}${remainingParagraphs}`;
-  }
-
   return {
     cityName: cityData.name,
     bundesland: cityData.bundesland,
