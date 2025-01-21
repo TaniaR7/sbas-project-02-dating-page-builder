@@ -248,37 +248,44 @@ async function generateCityContent(cityData: CityData, citySlug: string, supabas
 
 serve(async (req) => {
   // Handle CORS preflight requests
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { 
+      headers: { 
+        ...corsHeaders,
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Max-Age': '86400',
+      } 
+    });
   }
 
   try {
-    console.log("Edge Function started");
-    const supabase = createSupabaseClient();
+    console.log('Edge function called with method:', req.method);
     
-    if (!req.body) {
-      console.error("No request body provided");
-      throw new Error("Request body is required");
+    if (req.method !== 'POST') {
+      throw new Error(`HTTP method ${req.method} is not allowed`);
     }
 
     const { citySlug } = await req.json();
+    console.log('Received request for city:', citySlug);
+
     if (!citySlug) {
-      throw new Error("City slug is required");
+      throw new Error('City slug is required');
     }
 
+    const supabase = createSupabaseClient();
+
+    // Check cache first
     const cacheUrl = `/singles/${citySlug}`;
     const cachedContent = await checkCacheValid(supabase, cacheUrl);
     
     if (cachedContent) {
-      console.log("Returning cached content for:", cacheUrl);
+      console.log('Returning cached content for:', cacheUrl);
       return new Response(cachedContent, {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
-    // If no cache, generate new content
-    console.log("Generating new content for:", citySlug);
-    
+    // If no cache, get city data
     const { data: cityData, error: cityError } = await supabase
       .from("cities")
       .select("name, bundesland")
@@ -286,59 +293,30 @@ serve(async (req) => {
       .single();
 
     if (cityError || !cityData) {
-      console.error("City not found:", citySlug);
-      throw new Error("City not found");
+      console.error('Error fetching city data:', cityError);
+      throw new Error(cityError?.message || 'City not found');
     }
 
-    // Generate content with error handling
-    let content;
-    try {
-      content = await generateCityContent(cityData, citySlug, supabase);
-      const htmlContent = JSON.stringify(content);
-      await updateCache(supabase, cacheUrl, htmlContent);
-      
-      return new Response(htmlContent, {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    } catch (error) {
-      console.error("Error generating content:", error);
-      
-      // Return partial content if available
-      const partialContent = {
-        cityName: cityData.name,
-        bundesland: cityData.bundesland,
-        title: `Singles in ${cityData.name} - Die besten Dating-Portale ${new Date().getFullYear()}`,
-        description: `Entdecke die Dating-Szene in ${cityData.name}. Finde die besten Orte zum Kennenlernen und die top Dating-Portale für Singles in ${cityData.name}.`,
-        images: [],
-        introduction: `<p>Willkommen in ${cityData.name}! Entdecken Sie die vielfältige Dating-Szene unserer Stadt.</p>`,
-        sections: [],
-        datingSites: [
-          {
-            name: "Parship",
-            description: "Eine der führenden Partnervermittlungen",
-            link: "https://singleboersen-aktuell.de/go/target.php?v=parship"
-          },
-          {
-            name: "ElitePartner",
-            description: "Hoher Anteil an Akademikern",
-            link: "https://singleboersen-aktuell.de/go/target.php?v=elitepartner"
-          }
-        ]
-      };
+    // Generate content
+    const content = await generateCityContent(cityData, citySlug, supabase);
+    const htmlContent = JSON.stringify(content);
+    
+    // Update cache
+    await updateCache(supabase, cacheUrl, htmlContent);
+    
+    return new Response(htmlContent, {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
 
-      return new Response(JSON.stringify(partialContent), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
   } catch (error) {
-    console.error("Unexpected error:", error);
+    console.error('Edge function error:', error);
     return new Response(
-      JSON.stringify({ 
-        error: "Ein unerwarteter Fehler ist aufgetreten",
-        details: error.message 
+      JSON.stringify({
+        error: error.message || 'An unexpected error occurred',
+        details: error.stack
       }),
       { 
-        status: 500,
+        status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     );
