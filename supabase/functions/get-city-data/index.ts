@@ -4,36 +4,68 @@ import { corsHeaders } from "../_shared/cors.ts";
 import { getPixabayImage } from "../_shared/pixabay.ts";
 import { marked } from "https://esm.sh/marked@9.1.6";
 
-interface CityData {
-  name: string;
-  bundesland: string;
-}
-
-interface Section {
-  title: string;
-  content: string;
-}
-
-interface CacheContent {
-  cityName: string;
-  bundesland: string;
-  title: string;
-  description: string;
-  introduction: string;
-  images: string[];
-  sections: Section[];
-  datingSites: Array<{
-    name: string;
-    description: string;
-    link: string;
-  }>;
-}
-
 // Utility functions
 const createSupabaseClient = () => {
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-  const supabaseKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+  const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   return createClient(supabaseUrl, supabaseKey);
+};
+
+const checkCacheValid = async (supabase: any, url: string): Promise<string | null> => {
+  console.log("Checking cache for URL:", url);
+  try {
+    const { data: cachedPage, error } = await supabase
+      .from("page_cache")
+      .select("html_content")
+      .eq("url", url)
+      .gt("expires_at", new Date().toISOString())
+      .single();
+
+    if (error) {
+      console.error("Error checking cache:", error);
+      return null;
+    }
+
+    if (cachedPage?.html_content) {
+      console.log("Valid cache found for URL:", url);
+      return cachedPage.html_content;
+    }
+
+    console.log("No valid cache found for URL:", url);
+    return null;
+  } catch (error) {
+    console.error("Error in checkCacheValid:", error);
+    return null;
+  }
+};
+
+const updateCache = async (supabase: any, url: string, htmlContent: string) => {
+  console.log("Updating cache for URL:", url);
+  const created_at = new Date().toISOString();
+  const expires_at = new Date(new Date().setMonth(new Date().getMonth() + 6)).toISOString();
+
+  try {
+    const { error } = await supabase
+      .from("page_cache")
+      .upsert({
+        url,
+        html_content: htmlContent,
+        created_at,
+        expires_at
+      }, {
+        onConflict: 'url'
+      });
+
+    if (error) {
+      console.error("Error updating cache:", error);
+      throw error;
+    }
+
+    console.log("Successfully updated cache for URL:", url);
+  } catch (error) {
+    console.error("Error in updateCache:", error);
+    throw error;
+  }
 };
 
 const getStyles = () => ({
@@ -224,9 +256,7 @@ async function generateCityContent(cityData: CityData): Promise<CacheContent> {
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
-    return new Response(null, { 
-      headers: corsHeaders 
-    });
+    return new Response(null, { headers: corsHeaders });
   }
 
   try {
@@ -235,63 +265,26 @@ serve(async (req) => {
     
     if (!req.body) {
       console.error("No request body provided");
-      return new Response(
-        JSON.stringify({ 
-          error: "Request body is required" 
-        }),
-        { 
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      );
+      throw new Error("Request body is required");
     }
 
-    // Parse and validate request body
-    let citySlug: string;
-    try {
-      const body = await req.json();
-      console.log("Received request body:", body);
-      
-      if (!body || typeof body !== 'object') {
-        throw new Error("Invalid request body format");
-      }
-      
-      if (!body.citySlug || typeof body.citySlug !== 'string') {
-        throw new Error("City slug must be a string");
-      }
-      
-      citySlug = body.citySlug;
-      console.log("Processing request for city:", citySlug);
-    } catch (error) {
-      console.error("Error parsing request body:", error);
-      return new Response(
-        JSON.stringify({ 
-          error: "Invalid request body",
-          details: error.message 
-        }),
-        { 
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      );
+    const { citySlug } = await req.json();
+    if (!citySlug) {
+      throw new Error("City slug is required");
     }
 
-    // Check cache first
-    const cacheKey = `/singles/${citySlug}`;
-    const cachedContent = await checkPageCache(supabase, cacheKey);
+    const cacheUrl = `/singles/${citySlug}`;
+    const cachedContent = await checkCacheValid(supabase, cacheUrl);
     
     if (cachedContent) {
-      console.log("Cache hit for", cacheKey);
-      return new Response(
-        cachedContent,
-        {
-          headers: corsHeaders
-        }
-      );
+      console.log("Returning cached content for:", cacheUrl);
+      return new Response(cachedContent, {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
     }
 
-    // Generate new content if cache miss
-    console.log("Generating new content for", citySlug);
+    // If no cache, generate new content
+    console.log("Generating new content for:", citySlug);
     
     const { data: cityData, error: cityError } = await supabase
       .from("cities")
@@ -301,39 +294,64 @@ serve(async (req) => {
 
     if (cityError || !cityData) {
       console.error("City not found:", citySlug);
-      return new Response(
-        JSON.stringify({ error: "City not found" }),
-        {
-          status: 404,
-          headers: corsHeaders
-        }
-      );
+      throw new Error("City not found");
     }
 
-    const content = await generateCityContent(cityData);
-    const htmlContent = JSON.stringify(content);
+    // Get city images only once
+    console.log("Fetching images from Pixabay for", cityData.name);
+    const cityImages = await Promise.all([
+      getPixabayImage(cityData.name, Deno.env.get("PIXABAY_API_KEY")!),
+      getPixabayImage(`${cityData.name} city`, Deno.env.get("PIXABAY_API_KEY")!)
+    ]);
 
+    // Generate content with error handling for each section
+    let content;
     try {
-      await updatePageCache(supabase, cacheKey, htmlContent);
-      console.log("Successfully cached content for", cacheKey);
+      content = await generateCityContent(cityData);
+      content.images = cityImages.filter(Boolean).slice(0, 2); // Only use first two valid images
+      
+      const htmlContent = JSON.stringify(content);
+      await updateCache(supabase, cacheUrl, htmlContent);
+      
+      return new Response(htmlContent, {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
     } catch (error) {
-      console.error("Error caching content:", error);
-      // Continue even if caching fails
+      console.error("Error generating content:", error);
+      
+      // Return partial content if available
+      const partialContent = {
+        cityName: cityData.name,
+        bundesland: cityData.bundesland,
+        title: `Singles in ${cityData.name} - Die besten Dating-Portale ${new Date().getFullYear()}`,
+        description: `Entdecke die Dating-Szene in ${cityData.name}. Finde die besten Orte zum Kennenlernen und die top Dating-Portale für Singles in ${cityData.name}.`,
+        images: cityImages.filter(Boolean).slice(0, 2),
+        introduction: `<p>Willkommen in ${cityData.name}! Entdecken Sie die vielfältige Dating-Szene unserer Stadt.</p>`,
+        sections: [],
+        datingSites: [
+          {
+            name: "Parship",
+            description: "Eine der führenden Partnervermittlungen",
+            link: "https://singleboersen-aktuell.de/go/target.php?v=parship"
+          },
+          {
+            name: "ElitePartner",
+            description: "Hoher Anteil an Akademikern",
+            link: "https://singleboersen-aktuell.de/go/target.php?v=elitepartner"
+          }
+        ]
+      };
+
+      return new Response(JSON.stringify(partialContent), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
     }
-
-    return new Response(
-      htmlContent,
-      {
-        headers: corsHeaders
-      }
-    );
-
   } catch (error) {
     console.error("Unexpected error:", error);
     return new Response(
       JSON.stringify({ 
-        error: "An unexpected error occurred", 
-        details: error.message
+        error: "Ein unerwarteter Fehler ist aufgetreten",
+        details: error.message 
       }),
       { 
         status: 500,
