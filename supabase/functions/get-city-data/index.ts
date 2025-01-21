@@ -245,19 +245,10 @@ serve(async (req) => {
   try {
     console.log('Received request:', req.method, req.url);
     
-    // Validate request body
-    if (!req.body) {
-      console.error('No request body received');
-      throw new Error('Request body is required');
-    }
-
-    // Parse the request body
+    // Get the request body as JSON directly
     let body;
-    const bodyText = await req.text();
-    console.log('Raw request body:', bodyText);
-
     try {
-      body = JSON.parse(bodyText);
+      body = await req.json();
       console.log('Parsed request body:', body);
     } catch (error) {
       console.error('Error parsing request body:', error);
