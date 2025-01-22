@@ -2,7 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createSupabaseClient } from "../_shared/supabase-client.ts";
 import { checkCacheValid, updateCache } from "../_shared/cache-handler.ts";
 import { generateCityContent } from "../_shared/content-generator.ts";
-import { corsHeaders } from "../_shared/cors.ts";
+import { corsHeaders } from "../_shared/pixabay.ts";
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -29,6 +29,16 @@ serve(async (req) => {
     // Extract citySlug from URL
     const url = new URL(req.url);
     const pathParts = url.pathname.split('/');
+    
+    // Check if the URL follows the /singles/{city} format
+    if (pathParts.length < 2 || pathParts[pathParts.length - 2] !== 'singles') {
+      console.error('Invalid URL format:', url.pathname);
+      return new Response(JSON.stringify({ error: 'Invalid URL format. Expected /singles/{city}' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
     const citySlug = pathParts[pathParts.length - 1];
 
     if (!citySlug) {
