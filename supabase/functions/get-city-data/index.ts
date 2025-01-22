@@ -1,7 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createSupabaseClient } from "../_shared/supabase-client.ts";
+import { checkCacheValid, updateCache } from "../_shared/cache-handler.ts";
 import { generateCityContent } from "../_shared/content-generator.ts";
-import { corsHeaders } from "../_shared/pixabay.ts";
+import { corsHeaders } from "../_shared/cors.ts";
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -10,39 +11,64 @@ serve(async (req) => {
   }
 
   try {
-    // Only allow POST requests
-    if (req.method !== 'POST') {
-      console.error('Invalid request method:', req.method);
-      return new Response(JSON.stringify({ error: 'Method not allowed' }), {
-        status: 405,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
+    console.log('Edge function called with method:', req.method);
+    
+    const { citySlug } = await req.json();
+    console.log('Received request for city:', citySlug);
+
+    if (!citySlug) {
+      throw new Error('City slug is required');
     }
 
-    // Extract request body
-    const { citySlug, cityData } = await req.json();
-
-    if (!citySlug || !cityData) {
-      console.error('Missing required data:', { citySlug, cityData });
-      return new Response(JSON.stringify({ error: 'Missing required data' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
-
-    console.log('Processing request for city:', citySlug);
     const supabase = createSupabaseClient();
+    const cacheUrl = `/singles/${citySlug}`;
+
+    // Check cache first
+    try {
+      const cachedContent = await checkCacheValid(supabase, cacheUrl);
+      if (cachedContent) {
+        console.log('Returning cached content for:', cacheUrl);
+        return new Response(cachedContent, {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+    } catch (cacheError) {
+      console.error('Cache check error:', cacheError);
+      // Continue execution even if cache check fails
+    }
+
+    // If no cache, get city data
+    const { data: cityData, error: cityError } = await supabase
+      .from("cities")
+      .select("name, bundesland")
+      .eq("slug", citySlug)
+      .maybeSingle();
+
+    if (cityError) {
+      console.error('Error fetching city data:', cityError);
+      throw new Error(cityError.message);
+    }
+
+    if (!cityData) {
+      console.error('City not found:', citySlug);
+      throw new Error('Stadt nicht gefunden');
+    }
 
     // Generate new content
     try {
       const content = await generateCityContent(cityData, citySlug, supabase);
+      const htmlContent = JSON.stringify(content);
       
-      return new Response(JSON.stringify(content), {
-        headers: { 
-          ...corsHeaders,
-          'Content-Type': 'application/json',
-          'Cache-Control': 'public, max-age=31536000'
-        }
+      // Update cache
+      try {
+        await updateCache(supabase, cacheUrl, htmlContent);
+      } catch (cacheError) {
+        console.error('Cache update error:', cacheError);
+        // Continue even if cache update fails
+      }
+      
+      return new Response(htmlContent, {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     } catch (contentError) {
       console.error('Content generation error:', contentError);
@@ -69,11 +95,7 @@ serve(async (req) => {
       };
       
       return new Response(JSON.stringify(fallbackContent), {
-        headers: { 
-          ...corsHeaders,
-          'Content-Type': 'application/json',
-          'Cache-Control': 'public, max-age=31536000'
-        }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
@@ -85,7 +107,7 @@ serve(async (req) => {
         details: error.stack
       }),
       { 
-        status: 500,
+        status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     );
