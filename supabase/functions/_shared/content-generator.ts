@@ -67,7 +67,6 @@ async function generateSectionContent(section: { title: string, prompt: string }
 export async function generateCityContent(cityData: CityData, citySlug: string, supabase: any): Promise<CacheContent> {
   console.log("Generating content for city:", cityData.name);
   
-  // Generate sections content first
   const sections = [
     {
       title: `${cityData.name} – Die Stadt der Singles`,
@@ -102,26 +101,13 @@ export async function generateCityContent(cityData: CityData, citySlug: string, 
   console.log("Generating content for all sections");
   const generatedSections = await Promise.all(sections.map(generateSectionContent));
 
-  // Get only one image from Pixabay
-  let images: string[] = [];
-  try {
-    const image = await getPixabayImage(cityData.name, Deno.env.get('PIXABAY_API_KEY')!);
-    if (image) {
-      const storedImage = await downloadAndStoreImage(image, citySlug, 1, supabase);
-      images = [storedImage];
-    }
-  } catch (error) {
-    console.error('Error fetching Pixabay image:', error);
-    images = [];
-  }
-
   return {
     cityName: cityData.name,
     bundesland: cityData.bundesland,
     title: `Singles in ${cityData.name} - Die besten Dating-Portale ${new Date().getFullYear()}`,
     description: `Entdecke die Dating-Szene in ${cityData.name}. Finde die besten Orte zum Kennenlernen und die top Dating-Portale für Singles in ${cityData.name}.`,
     introduction: generatedSections[0].content,
-    images,
+    images: await getCityImages(cityData.name, citySlug, supabase),
     sections: generatedSections.slice(1),
     datingSites: [
       {
