@@ -126,9 +126,9 @@ const CityTemplate = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
               <div>
                 <h2 className="text-3xl font-bold mb-6">{data.cityName}: Eine Stadt für Lebensfreude und Begegnungen</h2>
-                <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: data.sections[1]?.content }} />
+                <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: data.sections?.[1]?.content || '' }} />
               </div>
-              {data.images?.[1] && (
+              {data.images && data.images.length > 1 && (
                 <div className="rounded-lg overflow-hidden shadow-lg">
                   <img
                     src={data.images[1]}
@@ -142,25 +142,25 @@ const CityTemplate = () => {
 
           {/* Meeting Places Section */}
           <section className="mb-16">
-            <h2 className="text-3xl font-bold mb-8">{data.sections[2]?.title}</h2>
-            <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: data.sections[2]?.content }} />
+            <h2 className="text-3xl font-bold mb-8">{data.sections?.[2]?.title}</h2>
+            <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: data.sections?.[2]?.content || '' }} />
           </section>
 
           {/* Singles Demographics Section */}
           <section className="mb-16">
-            <h2 className="text-3xl font-bold mb-8">{data.sections[3]?.title}</h2>
-            <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: data.sections[3]?.content }} />
+            <h2 className="text-3xl font-bold mb-8">{data.sections?.[3]?.title}</h2>
+            <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: data.sections?.[3]?.content || '' }} />
           </section>
 
           {/* Events and Networks Section */}
           <section className="mb-16">
-            <h2 className="text-3xl font-bold mb-8">{data.sections[4]?.title}</h2>
-            <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: data.sections[4]?.content }} />
+            <h2 className="text-3xl font-bold mb-8">{data.sections?.[4]?.title}</h2>
+            <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: data.sections?.[4]?.content || '' }} />
           </section>
 
           {/* Dating Sites Section */}
           <section className="mb-16">
-            <h2 className="text-3xl font-bold mb-8">{data.sections[5]?.title}</h2>
+            <h2 className="text-3xl font-bold mb-8">{data.sections?.[5]?.title}</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {data.datingSites?.map((site) => (
                 <Card key={site.name} className="p-6 hover:shadow-lg transition-shadow">
@@ -178,14 +178,14 @@ const CityTemplate = () => {
 
           {/* Dating Tips Section */}
           <section className="mb-16">
-            <h2 className="text-3xl font-bold mb-8">{data.sections[6]?.title}</h2>
-            <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: data.sections[6]?.content }} />
+            <h2 className="text-3xl font-bold mb-8">{data.sections?.[6]?.title}</h2>
+            <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: data.sections?.[6]?.content || '' }} />
           </section>
 
           {/* Conclusion Section */}
           <section className="mb-16">
-            <h2 className="text-3xl font-bold mb-8">{data.sections[7]?.title}</h2>
-            <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: data.sections[7]?.content }} />
+            <h2 className="text-3xl font-bold mb-8">{data.sections?.[7]?.title}</h2>
+            <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: data.sections?.[7]?.content || '' }} />
           </section>
         </div>
 
