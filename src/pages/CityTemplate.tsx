@@ -21,7 +21,7 @@ const CityTemplate = () => {
         console.log('Fetching data for city:', citySlug);
         
         const { data, error } = await supabase.functions.invoke("get-city-data", {
-          method: 'GET',
+          method: 'POST',
           body: {
             path: `/singles/${citySlug}`
           }
