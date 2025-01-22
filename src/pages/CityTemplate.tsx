@@ -20,11 +20,23 @@ const CityTemplate = () => {
       try {
         console.log('Fetching data for city:', citySlug);
         
+        const { data: cityData, error: cityError } = await supabase
+          .from('cities')
+          .select('*')
+          .eq('slug', citySlug)
+          .single();
+
+        if (cityError) {
+          console.error('Error fetching city:', cityError);
+          throw cityError;
+        }
+
+        if (!cityData) {
+          throw new Error('Stadt nicht gefunden');
+        }
+
         const { data, error } = await supabase.functions.invoke("get-city-data", {
-          method: 'GET',
-          headers: {
-            path: `/singles/${citySlug}`
-          }
+          body: { citySlug, cityData },
         });
 
         if (error) {
