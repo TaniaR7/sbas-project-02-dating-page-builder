@@ -1,115 +1,100 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createSupabaseClient } from "../_shared/supabase-client.ts";
-import { checkCacheValid, updateCache } from "../_shared/cache-handler.ts";
-import { generateCityContent } from "../_shared/content-generator.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
+const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+
 serve(async (req) => {
-  // Handle CORS preflight requests
+  // Handle CORS
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Only allow GET requests
+  if (req.method !== 'GET') {
+    return new Response(
+      JSON.stringify({ error: 'Method not allowed' }),
+      { status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
   try {
-    console.log('Edge function called with method:', req.method);
-    
-    const { citySlug } = await req.json();
-    console.log('Received request for city:', citySlug);
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const url = new URL(req.url);
+    const citySlug = url.pathname.split('/').pop();
 
     if (!citySlug) {
       throw new Error('City slug is required');
     }
 
-    const supabase = createSupabaseClient();
-    const cacheUrl = `/singles/${citySlug}`;
-
     // Check cache first
-    try {
-      const cachedContent = await checkCacheValid(supabase, cacheUrl);
-      if (cachedContent) {
-        console.log('Returning cached content for:', cacheUrl);
-        return new Response(cachedContent, {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        });
-      }
-    } catch (cacheError) {
-      console.error('Cache check error:', cacheError);
-      // Continue execution even if cache check fails
-    }
-
-    // If no cache, get city data
-    const { data: cityData, error: cityError } = await supabase
-      .from("cities")
-      .select("name, bundesland")
-      .eq("slug", citySlug)
+    const now = new Date().toISOString();
+    const { data: cachedPage, error: cacheError } = await supabase
+      .from('page_cache')
+      .select('html_content')
+      .eq('url', `/singles/${citySlug}`)
+      .gt('expires_at', now)
       .maybeSingle();
 
+    if (cacheError) {
+      console.error('Cache lookup error:', cacheError);
+    } else if (cachedPage?.html_content) {
+      console.log('Cache hit for:', citySlug);
+      return new Response(cachedPage.html_content, {
+        headers: { ...corsHeaders, 'Content-Type': 'text/html' }
+      });
+    }
+
+    // Get city data
+    const { data: cityData, error: cityError } = await supabase
+      .from('cities')
+      .select('*')
+      .eq('slug', citySlug)
+      .single();
+
     if (cityError) {
-      console.error('Error fetching city data:', cityError);
-      throw new Error(cityError.message);
+      throw new Error(`Error fetching city: ${cityError.message}`);
     }
 
     if (!cityData) {
-      console.error('City not found:', citySlug);
-      throw new Error('Stadt nicht gefunden');
+      throw new Error('City not found');
     }
 
-    // Generate new content
+    // Generate content
+    const content = await generateCityContent(cityData, citySlug, supabase);
+    const htmlContent = JSON.stringify(content);
+
+    // Cache the content
     try {
-      const content = await generateCityContent(cityData, citySlug, supabase);
-      const htmlContent = JSON.stringify(content);
-      
-      // Update cache
-      try {
-        await updateCache(supabase, cacheUrl, htmlContent);
-      } catch (cacheError) {
-        console.error('Cache update error:', cacheError);
-        // Continue even if cache update fails
+      const created_at = new Date().toISOString();
+      const expires_at = new Date(new Date().setMonth(new Date().getMonth() + 6)).toISOString();
+
+      const { error: cacheWriteError } = await supabase
+        .from('page_cache')
+        .upsert({
+          url: `/singles/${citySlug}`,
+          html_content: htmlContent,
+          created_at,
+          expires_at
+        });
+
+      if (cacheWriteError) {
+        console.error('Cache write error:', cacheWriteError);
       }
-      
-      return new Response(htmlContent, {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    } catch (contentError) {
-      console.error('Content generation error:', contentError);
-      // Return a fallback response with basic city information
-      const fallbackContent = {
-        cityName: cityData.name,
-        bundesland: cityData.bundesland,
-        title: `Singles in ${cityData.name} - Die besten Dating-Portale ${new Date().getFullYear()}`,
-        description: `Entdecke die Dating-Szene in ${cityData.name}. Finde die besten Orte zum Kennenlernen und die top Dating-Portale für Singles in ${cityData.name}.`,
-        introduction: `Willkommen in ${cityData.name}! Leider können wir momentan keine detaillierten Informationen anzeigen. Bitte versuchen Sie es später erneut.`,
-        sections: [],
-        datingSites: [
-          {
-            name: "Parship",
-            description: "Eine der führenden Partnervermittlungen",
-            link: "https://singleboersen-aktuell.de/go/target.php?v=parship"
-          },
-          {
-            name: "ElitePartner",
-            description: "Hoher Anteil an Akademikern",
-            link: "https://singleboersen-aktuell.de/go/target.php?v=elitepartner"
-          }
-        ]
-      };
-      
-      return new Response(JSON.stringify(fallbackContent), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
+    } catch (cacheError) {
+      console.error('Error writing to cache:', cacheError);
     }
+
+    return new Response(htmlContent, {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
 
   } catch (error) {
     console.error('Edge function error:', error);
     return new Response(
-      JSON.stringify({
-        error: error.message || 'Ein unerwarteter Fehler ist aufgetreten',
-        details: error.stack
-      }),
-      { 
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      }
+      JSON.stringify({ error: error.message }),
+      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });
