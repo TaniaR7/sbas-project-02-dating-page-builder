@@ -9,14 +9,6 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // Only allow GET requests
-  if (req.method !== 'GET') {
-    return new Response(
-      JSON.stringify({ error: 'Method not allowed' }),
-      { status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-  }
-
   try {
     const url = new URL(req.url);
     const citySlug = url.searchParams.get('citySlug');
@@ -30,23 +22,6 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
-
-    // Check cache first
-    const { data: cachedPage, error: cacheError } = await supabaseClient
-      .from('page_cache')
-      .select('html_content')
-      .eq('url', `/singles/${citySlug}`)
-      .gt('expires_at', new Date().toISOString())
-      .maybeSingle();
-
-    if (cacheError) {
-      console.error('Cache lookup error:', cacheError);
-    } else if (cachedPage?.html_content) {
-      console.log('Cache hit for:', citySlug);
-      return new Response(cachedPage.html_content, {
-        headers: { ...corsHeaders, 'Content-Type': 'text/html' }
-      });
-    }
 
     // Fetch city data
     const { data: cityData, error: cityError } = await supabaseClient
@@ -65,27 +40,6 @@ serve(async (req) => {
 
     // Generate content
     const content = await generateCityContent(cityData, citySlug, supabaseClient);
-
-    // Cache the content
-    try {
-      const created_at = new Date().toISOString();
-      const expires_at = new Date(new Date().setMonth(new Date().getMonth() + 6)).toISOString();
-
-      const { error: cacheWriteError } = await supabaseClient
-        .from('page_cache')
-        .upsert({
-          url: `/singles/${citySlug}`,
-          html_content: JSON.stringify(content),
-          created_at,
-          expires_at
-        });
-
-      if (cacheWriteError) {
-        console.error('Cache write error:', cacheWriteError);
-      }
-    } catch (cacheError) {
-      console.error('Error writing to cache:', cacheError);
-    }
 
     return new Response(
       JSON.stringify(content),
