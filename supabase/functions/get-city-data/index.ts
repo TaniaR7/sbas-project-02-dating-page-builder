@@ -1,8 +1,66 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createSupabaseClient } from "../_shared/supabase-client.ts";
-import { checkCacheValid, updateCache } from "../_shared/cache-handler.ts";
 import { generateCityContent } from "../_shared/content-generator.ts";
 import { corsHeaders } from "../_shared/pixabay.ts";
+
+async function checkCache(supabase: any, url: string): Promise<string | null> {
+  try {
+    console.log("Checking cache for URL:", url);
+    const currentDate = new Date().toISOString();
+    
+    const { data: cachedPage, error } = await supabase
+      .from("page_cache")
+      .select("html_content")
+      .eq("url", url)
+      .gt("expires_at", currentDate)
+      .maybeSingle();
+
+    if (error) {
+      console.error("Error checking cache:", error);
+      return null;
+    }
+
+    if (cachedPage?.html_content) {
+      console.log("Valid cache found for URL:", url);
+      return cachedPage.html_content;
+    }
+
+    console.log("No valid cache found for URL:", url);
+    return null;
+  } catch (error) {
+    console.error("Error in checkCache:", error);
+    return null;
+  }
+}
+
+async function updateCache(supabase: any, url: string, htmlContent: string) {
+  try {
+    console.log("Updating cache for URL:", url);
+    const created_at = new Date().toISOString();
+    const expires_at = new Date(new Date().setMonth(new Date().getMonth() + 6)).toISOString();
+
+    const { error } = await supabase
+      .from("page_cache")
+      .upsert({
+        url,
+        html_content: htmlContent,
+        created_at,
+        expires_at
+      }, {
+        onConflict: 'url'
+      });
+
+    if (error) {
+      console.error("Error updating cache:", error);
+      throw error;
+    }
+
+    console.log("Successfully updated cache for URL:", url);
+  } catch (error) {
+    console.error("Error in updateCache:", error);
+    throw error;
+  }
+}
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -11,52 +69,29 @@ serve(async (req) => {
   }
 
   try {
-    console.log('Edge function called with method:', req.method);
-    
-    // Accept both GET and POST requests
-    if (req.method !== 'GET' && req.method !== 'POST') {
+    // Only allow GET requests
+    if (req.method !== 'GET') {
       console.error('Invalid request method:', req.method);
       return new Response(JSON.stringify({ error: 'Method not allowed' }), {
         status: 405,
-        headers: { 
-          ...corsHeaders,
-          'Content-Type': 'application/json',
-          'Allow': 'GET, POST'
-        }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
-    let citySlug;
+    // Extract citySlug from URL
+    const url = new URL(req.url);
+    const pathParts = url.pathname.split('/');
     
-    if (req.method === 'POST') {
-      // Extract citySlug from POST body
-      const body = await req.json();
-      const path = body.path;
-      
-      if (!path || !path.startsWith('/singles/')) {
-        console.error('Invalid URL format:', path);
-        return new Response(JSON.stringify({ error: 'Invalid URL format. Expected /singles/{city}' }), {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        });
-      }
-      
-      citySlug = path.split('/singles/')[1];
-    } else {
-      // Extract citySlug from URL for GET requests
-      const url = new URL(req.url);
-      const pathParts = url.pathname.split('/');
-      
-      if (pathParts.length < 2 || pathParts[pathParts.length - 2] !== 'singles') {
-        console.error('Invalid URL format:', url.pathname);
-        return new Response(JSON.stringify({ error: 'Invalid URL format. Expected /singles/{city}' }), {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        });
-      }
-
-      citySlug = pathParts[pathParts.length - 1];
+    if (pathParts.length < 2 || pathParts[pathParts.length - 2] !== 'singles') {
+      console.error('Invalid URL format:', url.pathname);
+      return new Response(JSON.stringify({ error: 'Invalid URL format. Expected /singles/{city}' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
     }
+
+    const citySlug = pathParts[pathParts.length - 1];
+    const cacheUrl = `/singles/${citySlug}`;
 
     if (!citySlug) {
       console.error('No city slug provided');
@@ -68,17 +103,16 @@ serve(async (req) => {
 
     console.log('Processing request for city:', citySlug);
     const supabase = createSupabaseClient();
-    const cacheUrl = `/singles/${citySlug}`;
 
     // Check cache first
     try {
-      const cachedContent = await checkCacheValid(supabase, cacheUrl);
+      const cachedContent = await checkCache(supabase, cacheUrl);
       if (cachedContent) {
         console.log('Returning cached content for:', cacheUrl);
         return new Response(cachedContent, {
           headers: { 
             ...corsHeaders,
-            'Content-Type': 'text/html',
+            'Content-Type': 'application/json',
             'Cache-Control': 'public, max-age=31536000'
           }
         });
@@ -127,7 +161,7 @@ serve(async (req) => {
       return new Response(htmlContent, {
         headers: { 
           ...corsHeaders,
-          'Content-Type': 'text/html',
+          'Content-Type': 'application/json',
           'Cache-Control': 'public, max-age=31536000'
         }
       });
@@ -158,7 +192,7 @@ serve(async (req) => {
       return new Response(JSON.stringify(fallbackContent), {
         headers: { 
           ...corsHeaders,
-          'Content-Type': 'text/html',
+          'Content-Type': 'application/json',
           'Cache-Control': 'public, max-age=31536000'
         }
       });
