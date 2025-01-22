@@ -13,36 +13,53 @@ serve(async (req) => {
   try {
     console.log('Edge function called with method:', req.method);
     
-    // Only accept GET requests
-    if (req.method !== 'GET') {
+    // Accept both GET and POST requests
+    if (req.method !== 'GET' && req.method !== 'POST') {
       console.error('Invalid request method:', req.method);
       return new Response(JSON.stringify({ error: 'Method not allowed' }), {
         status: 405,
         headers: { 
           ...corsHeaders,
           'Content-Type': 'application/json',
-          'Allow': 'GET'
+          'Allow': 'GET, POST'
         }
       });
     }
 
-    // Extract citySlug from URL
-    const url = new URL(req.url);
-    const pathParts = url.pathname.split('/');
+    let citySlug;
     
-    // Check if the URL follows the /singles/{city} format
-    if (pathParts.length < 2 || pathParts[pathParts.length - 2] !== 'singles') {
-      console.error('Invalid URL format:', url.pathname);
-      return new Response(JSON.stringify({ error: 'Invalid URL format. Expected /singles/{city}' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
+    if (req.method === 'POST') {
+      // Extract citySlug from POST body
+      const body = await req.json();
+      const path = body.path;
+      
+      if (!path || !path.startsWith('/singles/')) {
+        console.error('Invalid URL format:', path);
+        return new Response(JSON.stringify({ error: 'Invalid URL format. Expected /singles/{city}' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+      
+      citySlug = path.split('/singles/')[1];
+    } else {
+      // Extract citySlug from URL for GET requests
+      const url = new URL(req.url);
+      const pathParts = url.pathname.split('/');
+      
+      if (pathParts.length < 2 || pathParts[pathParts.length - 2] !== 'singles') {
+        console.error('Invalid URL format:', url.pathname);
+        return new Response(JSON.stringify({ error: 'Invalid URL format. Expected /singles/{city}' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      citySlug = pathParts[pathParts.length - 1];
     }
 
-    const citySlug = pathParts[pathParts.length - 1];
-
     if (!citySlug) {
-      console.error('No city slug provided in URL');
+      console.error('No city slug provided');
       return new Response(JSON.stringify({ error: 'City slug is required' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
