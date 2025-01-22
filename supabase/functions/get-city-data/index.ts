@@ -1,12 +1,10 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
-
-const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
-const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+import { generateCityContent } from "../_shared/content-generator.ts";
 
 serve(async (req) => {
-  // Handle CORS
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -20,21 +18,25 @@ serve(async (req) => {
   }
 
   try {
-    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     const url = new URL(req.url);
-    const citySlug = url.pathname.split('/').pop();
+    const citySlug = url.searchParams.get('citySlug');
 
     if (!citySlug) {
       throw new Error('City slug is required');
     }
 
+    // Initialize Supabase client
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+
     // Check cache first
-    const now = new Date().toISOString();
-    const { data: cachedPage, error: cacheError } = await supabase
+    const { data: cachedPage, error: cacheError } = await supabaseClient
       .from('page_cache')
       .select('html_content')
       .eq('url', `/singles/${citySlug}`)
-      .gt('expires_at', now)
+      .gt('expires_at', new Date().toISOString())
       .maybeSingle();
 
     if (cacheError) {
@@ -46,8 +48,8 @@ serve(async (req) => {
       });
     }
 
-    // Get city data
-    const { data: cityData, error: cityError } = await supabase
+    // Fetch city data
+    const { data: cityData, error: cityError } = await supabaseClient
       .from('cities')
       .select('*')
       .eq('slug', citySlug)
@@ -62,19 +64,18 @@ serve(async (req) => {
     }
 
     // Generate content
-    const content = await generateCityContent(cityData, citySlug, supabase);
-    const htmlContent = JSON.stringify(content);
+    const content = await generateCityContent(cityData, citySlug, supabaseClient);
 
     // Cache the content
     try {
       const created_at = new Date().toISOString();
       const expires_at = new Date(new Date().setMonth(new Date().getMonth() + 6)).toISOString();
 
-      const { error: cacheWriteError } = await supabase
+      const { error: cacheWriteError } = await supabaseClient
         .from('page_cache')
         .upsert({
           url: `/singles/${citySlug}`,
-          html_content: htmlContent,
+          html_content: JSON.stringify(content),
           created_at,
           expires_at
         });
@@ -86,9 +87,10 @@ serve(async (req) => {
       console.error('Error writing to cache:', cacheError);
     }
 
-    return new Response(htmlContent, {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
+    return new Response(
+      JSON.stringify(content),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
 
   } catch (error) {
     console.error('Edge function error:', error);
