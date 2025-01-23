@@ -104,8 +104,19 @@ export async function generateCityContent(cityData: CityData, citySlug: string, 
 
   // Modify section 2 content to include the image with the new styling
   if (generatedSections[1] && images[1]) {
-    const imageHtml = `<img src="${images[1]}" alt="Leben in ${cityData.name}" style="float: left; margin-right: 10px; margin-bottom: 5px; max-width: 200px; height: auto;" />`;
-    generatedSections[1].content = imageHtml + generatedSections[1].content;
+    const imageHtml = `
+      <h2 class="text-3xl font-bold mb-6">${cityData.name}: Eine Stadt für Lebensfreude und Begegnungen</h2>
+      <div style="overflow: hidden;">
+        <img 
+          src="${images[1]}" 
+          alt="Leben in ${cityData.name}" 
+          style="float: left; margin-right: 10px; margin-bottom: 5px; max-width: 200px; height: auto;" 
+        />
+        ${generatedSections[1].content}
+        <div style="clear: both;"></div>
+      </div>
+    `;
+    generatedSections[1].content = imageHtml;
   }
 
   return {
