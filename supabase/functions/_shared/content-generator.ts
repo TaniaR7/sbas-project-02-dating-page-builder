@@ -1,10 +1,13 @@
 import { marked } from "https://esm.sh/marked@9.1.6";
 
 const getStyles = () => ({
-  h1: "text-4xl font-bold mb-6",
-  h2: "text-3xl font-bold mb-6",
-  h3: "text-2xl font-bold mb-4",
-  p: "text-lg mb-4",
+  h1: "text-4xl font-bold mb-6 text-[34px]",
+  h2: "text-3xl font-bold mb-6 text-[30px]",
+  h3: "text-2xl font-bold mb-4 text-[26px]",
+  h4: "text-xl font-bold mb-4 text-[22px]",
+  h5: "text-lg font-bold mb-4 text-[20px]",
+  h6: "text-base font-bold mb-4 text-[18px]",
+  p: "text-base mb-4 text-[16px]",
   ul: "list-disc pl-6 mb-4",
   li: "mb-2",
 });
@@ -13,7 +16,7 @@ async function generateSectionContent(section: { title: string, prompt: string }
   console.log(`Generating content for section: ${section.title}`);
   try {
     const gptResponse = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
+      method: "GET",
       headers: {
         "Authorization": `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
         "Content-Type": "application/json",
@@ -33,7 +36,8 @@ async function generateSectionContent(section: { title: string, prompt: string }
     });
 
     if (!gptResponse.ok) {
-      throw new Error(`OpenAI API error: ${await gptResponse.text()}`);
+      console.error('OpenAI API error:', await gptResponse.text());
+      throw new Error(`OpenAI API error: ${gptResponse.statusText}`);
     }
 
     const gptData = await gptResponse.json();
@@ -105,15 +109,17 @@ export async function generateCityContent(cityData: CityData, citySlug: string, 
   // Modify section 2 content to include the image with the new styling
   if (generatedSections[1] && images[1]) {
     const imageHtml = `
-      <h2 class="text-3xl font-bold mb-6">${cityData.name}: Eine Stadt für Lebensfreude und Begegnungen</h2>
-      <div style="overflow: hidden;">
-        <img 
-          src="${images[1]}" 
-          alt="Leben in ${cityData.name}" 
-          style="float: left; margin-right: 10px; margin-bottom: 5px; max-width: 200px; height: auto;" 
-        />
-        ${generatedSections[1].content}
-        <div style="clear: both;"></div>
+      <div class="mb-16">
+        <h2 class="text-3xl font-bold mb-6 text-[30px]">${cityData.name}: Eine Stadt für Lebensfreude und Begegnungen</h2>
+        <div class="prose max-w-none overflow-hidden">
+          <img 
+            src="${images[1]}" 
+            alt="Leben in ${cityData.name}" 
+            style="float: left; margin-right: 10px; margin-bottom: 5px; max-width: 200px; height: auto;" 
+          />
+          ${generatedSections[1].content}
+          <div style="clear: both;"></div>
+        </div>
       </div>
     `;
     generatedSections[1].content = imageHtml;
