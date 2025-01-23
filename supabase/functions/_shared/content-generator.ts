@@ -1,13 +1,10 @@
 import { marked } from "https://esm.sh/marked@9.1.6";
 
 const getStyles = () => ({
-  h1: "text-4xl font-bold mb-6 text-[34px]",
-  h2: "text-3xl font-bold mb-6 text-[30px]",
-  h3: "text-2xl font-bold mb-4 text-[26px]",
-  h4: "text-xl font-bold mb-4 text-[22px]",
-  h5: "text-lg font-bold mb-4 text-[20px]",
-  h6: "text-base font-bold mb-4 text-[18px]",
-  p: "text-base mb-4 text-[16px]",
+  h1: "text-4xl font-bold mb-6",
+  h2: "text-3xl font-bold mb-6",
+  h3: "text-2xl font-bold mb-4",
+  p: "text-lg mb-4",
   ul: "list-disc pl-6 mb-4",
   li: "mb-2",
 });
@@ -16,7 +13,7 @@ async function generateSectionContent(section: { title: string, prompt: string }
   console.log(`Generating content for section: ${section.title}`);
   try {
     const gptResponse = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "GET",
+      method: "POST",
       headers: {
         "Authorization": `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
         "Content-Type": "application/json",
@@ -36,8 +33,7 @@ async function generateSectionContent(section: { title: string, prompt: string }
     });
 
     if (!gptResponse.ok) {
-      console.error('OpenAI API error:', await gptResponse.text());
-      throw new Error(`OpenAI API error: ${gptResponse.statusText}`);
+      throw new Error(`OpenAI API error: ${await gptResponse.text()}`);
     }
 
     const gptData = await gptResponse.json();
@@ -104,26 +100,6 @@ export async function generateCityContent(cityData: CityData, citySlug: string, 
 
   console.log("Generating content for all sections");
   const generatedSections = await Promise.all(sections.map(generateSectionContent));
-  const images = await getCityImages(cityData.name, citySlug, supabase);
-
-  // Modify section 2 content to include the image with the new styling
-  if (generatedSections[1] && images[1]) {
-    const imageHtml = `
-      <div class="mb-16">
-        <h2 class="text-3xl font-bold mb-6 text-[30px]">${cityData.name}: Eine Stadt für Lebensfreude und Begegnungen</h2>
-        <div class="prose max-w-none overflow-hidden">
-          <img 
-            src="${images[1]}" 
-            alt="Leben in ${cityData.name}" 
-            style="float: left; margin-right: 10px; margin-bottom: 5px; max-width: 200px; height: auto;" 
-          />
-          ${generatedSections[1].content}
-          <div style="clear: both;"></div>
-        </div>
-      </div>
-    `;
-    generatedSections[1].content = imageHtml;
-  }
 
   return {
     cityName: cityData.name,
@@ -131,7 +107,7 @@ export async function generateCityContent(cityData: CityData, citySlug: string, 
     title: `Singles in ${cityData.name} - Die besten Dating-Portale ${new Date().getFullYear()}`,
     description: `Entdecke die Dating-Szene in ${cityData.name}. Finde die besten Orte zum Kennenlernen und die top Dating-Portale für Singles in ${cityData.name}.`,
     introduction: generatedSections[0].content,
-    images: images,
+    images: await getCityImages(cityData.name, citySlug, supabase),
     sections: generatedSections.slice(1),
     datingSites: [
       {
