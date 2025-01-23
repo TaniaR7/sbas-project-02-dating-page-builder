@@ -91,12 +91,12 @@ const Index = () => {
 
       {/* City Cards Link */}
       <div className="py-16 container mx-auto px-4">
-        <h2 
+        <button 
           onClick={() => scrollToSection('city-cards')} 
-          className="text-3xl font-bold text-center mb-12 cursor-pointer hover:text-primary transition-colors"
+          className="text-3xl font-bold text-center mb-12 px-8 py-3 bg-primary text-white border-2 border-primary hover:bg-white hover:text-primary transition-colors rounded-md"
         >
           Singles in deiner Stadt
-        </h2>
+        </button>
       </div>
 
       {/* Categories Section */}
