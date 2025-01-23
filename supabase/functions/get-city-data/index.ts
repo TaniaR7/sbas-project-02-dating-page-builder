@@ -10,15 +10,32 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  try {
-    console.log('Edge function called with method:', req.method);
-    
-    const { citySlug } = await req.json();
-    console.log('Received request for city:', citySlug);
+  // Only allow GET requests
+  if (req.method !== 'GET') {
+    console.error('Method not allowed:', req.method);
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+      status: 405,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  }
 
-    if (!citySlug) {
-      throw new Error('City slug is required');
+  try {
+    const url = new URL(req.url);
+    const path = url.pathname;
+    console.log('Processing request for path:', path);
+
+    // Extract city slug from URL if it matches the pattern /singles/{city}
+    const matches = path.match(/^\/singles\/([^\/]+)$/);
+    if (!matches) {
+      console.error('Invalid URL pattern:', path);
+      return new Response(JSON.stringify({ error: 'Page not found' }), {
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
     }
+
+    const citySlug = matches[1];
+    console.log('Extracted city slug:', citySlug);
 
     const supabase = createSupabaseClient();
     const cacheUrl = `/singles/${citySlug}`;
