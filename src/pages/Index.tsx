@@ -89,14 +89,14 @@ const Index = () => {
         </div>
       </header>
 
-      {/* City Cards Link */}
-      <div className="py-16 container mx-auto px-4">
-        <button 
-          onClick={() => scrollToSection('city-cards')} 
-          className="text-3xl font-bold text-center mb-12 px-8 py-3 bg-primary text-white border-2 border-primary hover:bg-white hover:text-primary transition-colors rounded-md">
-          Singles in deiner Stadt
-        </button>
-      </div>
+    {/* City Cards Link */}
+     <div className="py-16 container mx-auto px-4 flex justify-center">
+       <button
+         onClick={() => scrollToSection('city-cards')}
+         className="text-3xl font-bold text-center mb-12 px-8 py-3 bg-primary text-white border-2 border-primary hover:bg-white hover:text-primary transition-colors rounded-md">
+         Singles in deiner Stadt
+       </button>
+     </div>
 
     {/* Categories Section */}
       <section className="py-16 container mx-auto px-4">
