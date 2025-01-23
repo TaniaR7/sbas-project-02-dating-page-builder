@@ -22,7 +22,7 @@ const CityTemplate = () => {
         
         const { data, error } = await supabase.functions.invoke("get-city-data", {
           method: 'GET',
-          params: { citySlug }
+          body: { citySlug }
         });
 
         if (error) {
