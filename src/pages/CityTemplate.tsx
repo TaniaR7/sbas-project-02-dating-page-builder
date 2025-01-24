@@ -24,7 +24,23 @@ const CityTemplate = () => {
         });
 
         if (functionError) {
+          console.error('Function error:', functionError);
           throw functionError;
+        }
+
+        if (!functionData && !functionData?.fallbackContent) {
+          throw new Error('Keine Daten erhalten');
+        }
+
+        // If we have an error but also fallback content, use the fallback
+        if (functionData.error && functionData.fallbackContent) {
+          console.log('Using fallback content due to error:', functionData.error);
+          toast({
+            title: "Hinweis",
+            description: functionData.message || "Einige Inhalte konnten nicht geladen werden.",
+            variant: "default",
+          });
+          return functionData.fallbackContent;
         }
 
         console.log('Received data:', functionData);
@@ -70,14 +86,14 @@ const CityTemplate = () => {
   return (
     <>
       <Helmet>
-        <title>{data.title || `Singles in ${citySlug} - Die besten Dating-Portale ${new Date().getFullYear()}`}</title>
-        <meta name="description" content={data.description} />
+        <title>{data?.title || `Singles in ${citySlug} - Die besten Dating-Portale ${new Date().getFullYear()}`}</title>
+        <meta name="description" content={data?.description} />
       </Helmet>
 
       <div className="min-h-screen bg-gray-50">
         {/* Hero Section */}
         <header className="bg-primary py-20 text-white relative overflow-hidden">
-          {data.images?.[0] && (
+          {data?.images?.[0] && (
             <div className="absolute inset-0">
               <img
                 src={data.images[0]}
@@ -88,7 +104,7 @@ const CityTemplate = () => {
           )}
           <div className="container mx-auto text-center px-4 relative z-10">
             <h1 className="text-4xl md:text-5xl font-bold mb-6">
-              Singles in {data.cityName} finden
+              Singles in {data?.cityName || citySlug} finden
             </h1>
             <Button size="lg" variant="secondary" className="bg-white text-primary hover:bg-gray-100">
               Jetzt Dating-Portal finden

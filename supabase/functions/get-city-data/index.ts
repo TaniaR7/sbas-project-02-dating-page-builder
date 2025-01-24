@@ -11,15 +11,23 @@ serve(async (req) => {
   }
 
   try {
-    const url = new URL(req.url);
-    const citySlug = url.pathname.split('/').pop();
+    // Only handle GET requests
+    if (req.method !== 'GET') {
+      console.error('Invalid request method:', req.method);
+      return new Response(
+        JSON.stringify({ error: 'Only GET requests are allowed' }),
+        { status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const { citySlug } = await req.json();
     
     if (!citySlug) {
-      console.error('No city slug provided in URL');
-      return new Response(JSON.stringify({ error: 'City slug is required' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
+      console.error('No city slug provided');
+      return new Response(
+        JSON.stringify({ error: 'City slug is required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     console.log('Processing request for city:', citySlug);
@@ -41,7 +49,7 @@ serve(async (req) => {
       // Continue execution even if cache check fails
     }
 
-    // If no cache, get city data
+    // Get city data
     const { data: cityData, error: cityError } = await supabase
       .from("cities")
       .select("name, bundesland")
@@ -55,7 +63,36 @@ serve(async (req) => {
 
     if (!cityData) {
       console.error('City not found:', citySlug);
-      throw new Error('Stadt nicht gefunden');
+      return new Response(
+        JSON.stringify({
+          error: 'Stadt nicht gefunden',
+          message: `Die Stadt "${citySlug}" wurde nicht in unserer Datenbank gefunden.`,
+          fallbackContent: {
+            cityName: citySlug,
+            bundesland: '',
+            title: `Singles in ${citySlug} - Die besten Dating-Portale ${new Date().getFullYear()}`,
+            description: `Entdecke die Dating-Szene in ${citySlug}. Finde die besten Orte zum Kennenlernen und die top Dating-Portale für Singles in ${citySlug}.`,
+            introduction: `Willkommen in ${citySlug}! Leider können wir momentan keine detaillierten Informationen anzeigen. Bitte versuchen Sie es später erneut.`,
+            sections: [],
+            datingSites: [
+              {
+                name: "Parship",
+                description: "Eine der führenden Partnervermittlungen",
+                link: "https://singleboersen-aktuell.de/go/target.php?v=parship"
+              },
+              {
+                name: "ElitePartner",
+                description: "Hoher Anteil an Akademikern",
+                link: "https://singleboersen-aktuell.de/go/target.php?v=elitepartner"
+              }
+            ]
+          }
+        }),
+        { 
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
     }
 
     // Generate new content
@@ -76,33 +113,36 @@ serve(async (req) => {
       });
     } catch (contentError) {
       console.error('Content generation error:', contentError);
-      // Return a fallback response with basic city information
-      const fallbackContent = {
-        cityName: cityData.name,
-        bundesland: cityData.bundesland,
-        title: `Singles in ${cityData.name} - Die besten Dating-Portale ${new Date().getFullYear()}`,
-        description: `Entdecke die Dating-Szene in ${cityData.name}. Finde die besten Orte zum Kennenlernen und die top Dating-Portale für Singles in ${cityData.name}.`,
-        introduction: `Willkommen in ${cityData.name}! Leider können wir momentan keine detaillierten Informationen anzeigen. Bitte versuchen Sie es später erneut.`,
-        sections: [],
-        datingSites: [
-          {
-            name: "Parship",
-            description: "Eine der führenden Partnervermittlungen",
-            link: "https://singleboersen-aktuell.de/go/target.php?v=parship"
-          },
-          {
-            name: "ElitePartner",
-            description: "Hoher Anteil an Akademikern",
-            link: "https://singleboersen-aktuell.de/go/target.php?v=elitepartner"
+      return new Response(
+        JSON.stringify({
+          error: contentError.message,
+          fallbackContent: {
+            cityName: cityData.name,
+            bundesland: cityData.bundesland,
+            title: `Singles in ${cityData.name} - Die besten Dating-Portale ${new Date().getFullYear()}`,
+            description: `Entdecke die Dating-Szene in ${cityData.name}. Finde die besten Orte zum Kennenlernen und die top Dating-Portale für Singles in ${cityData.name}.`,
+            introduction: `Willkommen in ${cityData.name}! Leider können wir momentan keine detaillierten Informationen anzeigen. Bitte versuchen Sie es später erneut.`,
+            sections: [],
+            datingSites: [
+              {
+                name: "Parship",
+                description: "Eine der führenden Partnervermittlungen",
+                link: "https://singleboersen-aktuell.de/go/target.php?v=parship"
+              },
+              {
+                name: "ElitePartner",
+                description: "Hoher Anteil an Akademikern",
+                link: "https://singleboersen-aktuell.de/go/target.php?v=elitepartner"
+              }
+            ]
           }
-        ]
-      };
-      
-      return new Response(JSON.stringify(fallbackContent), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
+        }),
+        { 
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
     }
-
   } catch (error) {
     console.error('Edge function error:', error);
     return new Response(
