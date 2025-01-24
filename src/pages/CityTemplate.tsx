@@ -19,21 +19,16 @@ const CityTemplate = () => {
 
       try {
         console.log('Fetching data for city:', citySlug);
-        const response = await fetch(`${supabase.functions.url}/get-city-data/${citySlug}`, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${supabase.auth.session()?.access_token}`,
-            'Content-Type': 'application/json'
-          }
+        const { data: functionData, error: functionError } = await supabase.functions.invoke('get-city-data', {
+          params: { citySlug }
         });
 
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+        if (functionError) {
+          throw functionError;
         }
 
-        const data = await response.json();
-        console.log('Received data:', data);
-        return data;
+        console.log('Received data:', functionData);
+        return functionData;
       } catch (err) {
         console.error('Error fetching city data:', err);
         toast({
