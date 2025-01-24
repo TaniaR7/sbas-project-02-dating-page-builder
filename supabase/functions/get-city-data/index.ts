@@ -10,19 +10,12 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // Only allow POST requests
-  if (req.method !== 'POST') {
-    console.error('Method not allowed:', req.method);
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
-      status: 405,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
-  }
-
   try {
-    const { citySlug } = await req.json();
+    const url = new URL(req.url);
+    const citySlug = url.pathname.split('/').pop();
     
     if (!citySlug) {
+      console.error('No city slug provided in URL');
       return new Response(JSON.stringify({ error: 'City slug is required' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }

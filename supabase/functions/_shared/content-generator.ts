@@ -1,4 +1,5 @@
 import { marked } from "https://esm.sh/marked@9.1.6";
+import { getCityImages } from "./image-handler.ts";
 
 const getStyles = () => ({
   h1: "text-4xl font-bold mb-6",
@@ -9,7 +10,7 @@ const getStyles = () => ({
   li: "mb-2",
 });
 
-async function generateSectionContent(section: { title: string, prompt: string }): Promise<Section> {
+async function generateSectionContent(section: { title: string, prompt: string }, cityName: string, images?: string[]): Promise<Section> {
   console.log(`Generating content for section: ${section.title}`);
   try {
     const gptResponse = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -19,7 +20,7 @@ async function generateSectionContent(section: { title: string, prompt: string }
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini",
+        model: "gpt-4",
         messages: [
           { 
             role: "system", 
@@ -37,14 +38,25 @@ async function generateSectionContent(section: { title: string, prompt: string }
     }
 
     const gptData = await gptResponse.json();
-    const markdownContent = gptData.choices?.[0]?.message?.content || "No content generated";
+    let markdownContent = gptData.choices?.[0]?.message?.content || "No content generated";
     const styles = getStyles();
     
+    // If this is section 2 and we have an image, embed it in the content
+    if (section.title.includes("Eine Stadt für Lebensfreude") && images?.[1]) {
+      const imageHtml = `<img src="${images[1]}" alt="Leben in ${cityName}" style="float: right; margin-left: 20px; margin-bottom: 20px; max-width: 200px; height: auto;" class="rounded-lg shadow-lg" />`;
+      markdownContent = imageHtml + "\n\n" + markdownContent;
+    }
+
     let htmlContent = marked(markdownContent, { 
       gfm: true, 
       breaks: true,
       sanitize: true 
     });
+
+    // Add clear:both to the last paragraph to prevent overlap
+    if (section.title.includes("Eine Stadt für Lebensfreude")) {
+      htmlContent = htmlContent.replace(/<\/p>$/, ' style="clear: both;"></p>');
+    }
 
     Object.entries(styles).forEach(([tag, style]) => {
       const regex = new RegExp(`<${tag}([^>]*)>`, 'g');

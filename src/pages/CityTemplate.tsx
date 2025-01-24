@@ -19,21 +19,19 @@ const CityTemplate = () => {
 
       try {
         console.log('Fetching data for city:', citySlug);
-        
-        const { data, error } = await supabase.functions.invoke("get-city-data", {
-          method: 'POST',
-          body: { citySlug }
+        const response = await fetch(`${supabase.functions.url}/get-city-data/${citySlug}`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${supabase.auth.session()?.access_token}`,
+            'Content-Type': 'application/json'
+          }
         });
 
-        if (error) {
-          console.error('Supabase function error:', error);
-          throw error;
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
         }
 
-        if (!data) {
-          throw new Error('Keine Daten von der Funktion zurückgegeben');
-        }
-
+        const data = await response.json();
         console.log('Received data:', data);
         return data;
       } catch (err) {
@@ -74,12 +72,6 @@ const CityTemplate = () => {
     );
   }
 
-  const stripHtml = (html: string) => {
-    const tmp = document.createElement('div');
-    tmp.innerHTML = html;
-    return tmp.textContent || tmp.innerText || '';
-  };
-
   return (
     <>
       <Helmet>
@@ -115,26 +107,15 @@ const CityTemplate = () => {
           <section className="mb-16">
             <h2 className="text-3xl font-bold mb-8">{data.cityName} – Die Stadt der Singles</h2>
             <div className="prose max-w-none">
-              <p className="text-xl mb-8">{stripHtml(data.introduction)}</p>
+              <div dangerouslySetInnerHTML={{ __html: data.introduction }} />
             </div>
           </section>
 
-          {/* City Info Section with second image */}
+          {/* City Info Section */}
           <section className="mb-16">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-              <div>
-                <h2 className="text-3xl font-bold mb-6">{data.cityName}: Eine Stadt für Lebensfreude und Begegnungen</h2>
-                <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: data.sections[1]?.content }} />
-              </div>
-              {data.images?.[1] && (
-                <div className="rounded-lg overflow-hidden shadow-lg">
-                  <img
-                    src={data.images[1]}
-                    alt={`Leben in ${data.cityName}`}
-                    className="w-full h-64 object-cover"
-                  />
-                </div>
-              )}
+            <div className="prose max-w-none">
+              <h2 className="text-3xl font-bold mb-6">{data.cityName}: Eine Stadt für Lebensfreude und Begegnungen</h2>
+              <div dangerouslySetInnerHTML={{ __html: data.sections[1]?.content }} />
             </div>
           </section>
 
