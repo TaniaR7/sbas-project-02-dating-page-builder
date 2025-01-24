@@ -11,11 +11,11 @@ serve(async (req) => {
   }
 
   try {
-    // Only handle GET requests
-    if (req.method !== 'GET') {
+    // Only handle POST requests
+    if (req.method !== 'POST') {
       console.error('Invalid request method:', req.method);
       return new Response(
-        JSON.stringify({ error: 'Only GET requests are allowed' }),
+        JSON.stringify({ error: 'Only POST requests are allowed' }),
         { status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
