@@ -11,16 +11,17 @@ serve(async (req) => {
   }
 
   try {
-    // Only handle POST requests
-    if (req.method !== 'POST') {
+    if (req.method !== 'GET') {
       console.error('Invalid request method:', req.method);
       return new Response(
-        JSON.stringify({ error: 'Only POST requests are allowed' }),
+        JSON.stringify({ error: 'Only GET requests are allowed' }),
         { status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const { citySlug } = await req.json();
+    // Get citySlug from URL parameters
+    const url = new URL(req.url);
+    const citySlug = url.searchParams.get('citySlug');
     
     if (!citySlug) {
       console.error('No city slug provided');
