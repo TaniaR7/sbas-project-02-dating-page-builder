@@ -20,7 +20,8 @@ const CityTemplate = () => {
       try {
         console.log('Fetching data for city:', citySlug);
         const { data: functionData, error: functionError } = await supabase.functions.invoke('get-city-data', {
-          body: { citySlug }
+          method: 'GET',
+          query: { citySlug }
         });
 
         if (functionError) {
