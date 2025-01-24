@@ -130,16 +130,10 @@ const CityTemplate = () => {
             <div className="prose max-w-none">
               <h2 className="text-3xl font-bold mb-6">{data.cityName}: Eine Stadt für Lebensfreude und Begegnungen</h2>
               
-              {/* New Flexbox Container */}
-              <div className="flex flex-col md:flex-row gap-8 items-start">
-                {/* Content Column */}
-                <div className="flex-1">
-                  <div dangerouslySetInnerHTML={{ __html: data.sections[0]?.content }} />
-                </div>
-                
-                {/* Image Column */}
+              {/* Image with text wrap */}
+              <div className="relative">
                 {data?.images?.[1] && (
-                  <div className="md:w-[40%] w-full">
+                  <div className="float-right ml-8 mb-6 md:w-[40%] w-full">
                     <img
                       src={data.images[1]}
                       alt={`Leben in ${data.cityName}`}
@@ -147,6 +141,7 @@ const CityTemplate = () => {
                     />
                   </div>
                 )}
+                <div dangerouslySetInnerHTML={{ __html: data.sections[0]?.content }} />
               </div>
             </div>
           </section>
