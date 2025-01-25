@@ -90,11 +90,11 @@ export async function generateCityContent(cityData: CityData, citySlug: string, 
     },
     {
       title: `Die besten Orte, um andere Singles zu treffen`,
-      prompt: `List and describe the best places in ${cityData.name} for singles to meet, including popular bars, cafes, cultural venues, and outdoor spaces. Be specific about locations and what makes them good for meeting people. Use one bullet list where appropriate. Do not write a concluding paragraph. Do not return the title in your answer.`
+      prompt: `List and describe the best places in ${cityData.name} for singles to meet, including popular bars, cafes, cultural venues, and outdoor spaces. Be specific about locations and what makes them good for meeting people. Use a bulleted list where appropriate. Do not write a concluding paragraph. Do not return the title in your answer.`
     },
     {
       title: `Singles in ${cityData.name}`,
-      prompt: `Provide information about the single population in ${cityData.name}, including demographics, age distribution, and interesting statistics about singles in the city. Be concise. Do not write a concluding paragraph. Do not return the title or the first heading.`
+      prompt: `Provide information about the single population in ${cityData.name}, including demographics, age distribution, and interesting statistics about singles in the city. Be concise. Use subheadings. Do not write a concluding paragraph. Do not return the title or the first heading.`
     },
     {
       title: `Veranstaltungen und Netzwerke für Singles in ${cityData.name}`,
@@ -102,7 +102,7 @@ export async function generateCityContent(cityData: CityData, citySlug: string, 
     },
     {
       title: `Tipps für erfolgreiches Dating in ${cityData.name}`,
-      prompt: `Give helpful and actionable tips for successful dating in ${cityData.name} considering the regional mentality and customs. Promote authenticity and openness as the keys to success. Share some ${cityData.name} specific insights for more online dating success. Do not write a concluding paragraph. Do not return the title.`
+      prompt: `Give helpful and actionable tips for successful dating in ${cityData.name} considering the regional mentality and customs. Promote authenticity and openness as the keys to success. Share some ${cityData.name} specific insights for more online dating success; use a numbered list. Do not write a concluding paragraph. Do not return the title.`
     },
     {
       title: `Fazit: Warum ${cityData.name} ideal für Singles ist`,
