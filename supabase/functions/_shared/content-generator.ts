@@ -110,8 +110,12 @@ export async function generateCityContent(cityData: CityData, citySlug: string, 
     }
   ];
 
-  console.log("Generating content for all sections");
-  const generatedSections = await Promise.all(sections.map(generateSectionContent));
+  const images = await getCityImages(cityData.name, citySlug, supabase);
+  console.log("Generated images:", images);
+
+  const generatedSections = await Promise.all(
+    sections.map(section => generateSectionContent(section, cityData.name, images))
+  );
 
   return {
     cityName: cityData.name,
@@ -119,7 +123,7 @@ export async function generateCityContent(cityData: CityData, citySlug: string, 
     title: `Singles in ${cityData.name} - Die besten Dating-Portale ${new Date().getFullYear()}`,
     description: `Entdecke die Dating-Szene in ${cityData.name}. Finde die besten Orte zum Kennenlernen und die top Dating-Portale für Singles in ${cityData.name}.`,
     introduction: generatedSections[0].content,
-    images: await getCityImages(cityData.name, citySlug, supabase),
+    images: images,
     sections: generatedSections.slice(1),
     datingSites: [
       {
