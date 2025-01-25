@@ -158,8 +158,7 @@ const Index = () => {
               <Link to={`/singles/${city.slug}`} key={city.id}>
                 <Card className="p-6 hover:shadow-lg transition-shadow">
                   <h3 className="text-xl font-semibold mb-3">{city.name}</h3>
-                  <p className="text-gray-600 mb-2">Singles in {city.name} kennenlernen</p>
-                  <p className="text-sm text-gray-500">{city.bundesland}</p>
+                  <p className="text-gray-600">Singles in {city.name} finden</p>
                 </Card>
               </Link>
             ))}
