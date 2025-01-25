@@ -82,7 +82,7 @@ export async function generateCityContent(cityData: CityData, citySlug: string, 
   const sections = [
     {
       title: `${cityData.name} – Die Stadt der Singles`,
-      prompt: `Write a welcoming introduction about singles in ${cityData.name}, focusing on the city's appeal for singles and dating. Include why ${cityData.name} is an exciting place for singles. Do not write a concluding paragraph. Do not return the title.`
+      prompt: `Write a welcoming introduction about singles in ${cityData.name}, focusing on the city's appeal for singles and dating. Include why ${cityData.name} is an exciting place for singles. Do not use subheadings. Do not write a concluding paragraph. Do not return the title.`
     },
     {
       title: `${cityData.name}: Eine Stadt für Lebensfreude und Begegnungen`,
@@ -90,7 +90,7 @@ export async function generateCityContent(cityData: CityData, citySlug: string, 
     },
     {
       title: `Die besten Orte, um andere Singles zu treffen`,
-      prompt: `List and describe the best places in ${cityData.name} for singles to meet, including popular bars, cafes, cultural venues, and outdoor spaces. Be specific about locations and what makes them good for meeting people. Use one bullet list where appropriate. Do not write a concluding paragraph. Do not return the title.`
+      prompt: `List and describe the best places in ${cityData.name} for singles to meet, including popular bars, cafes, cultural venues, and outdoor spaces. Be specific about locations and what makes them good for meeting people. Use one bullet list where appropriate. Do not write a concluding paragraph. Do not return the title in your answer.`
     },
     {
       title: `Singles in ${cityData.name}`,
@@ -98,7 +98,7 @@ export async function generateCityContent(cityData: CityData, citySlug: string, 
     },
     {
       title: `Veranstaltungen und Netzwerke für Singles in ${cityData.name}`,
-      prompt: `Detail the various events, meetups, and networking opportunities available for singles in ${cityData.name}. Include specific events and organizations that cater to singles. Do not write a concluding paragraph. Do not return the title.`
+      prompt: `Detail the various events, meetups, and networking opportunities available for singles in ${cityData.name}. Include specific events and organizations that cater to singles. Do not mention 'online dating'. Do not write a concluding paragraph. Do not return the title.`
     },
     {
       title: `Tipps für erfolgreiches Dating in ${cityData.name}`,
@@ -106,7 +106,7 @@ export async function generateCityContent(cityData: CityData, citySlug: string, 
     },
     {
       title: `Fazit: Warum ${cityData.name} ideal für Singles ist`,
-      prompt: `Provide a summary of the advantages for singles in ${cityData.name}. Encouragement to use the potential of the city and online dating to meet new people. Close with a call-to-action: "Trau dich, ${cityData.name}s Single-Welt zu entdecken!". Do not write a concluding paragraph. Do not return the title.`
+      prompt: `Provide a summary of the advantages for singles in ${cityData.name}. Encouragement to use the potential of the city and online dating to meet new people. Do not use subheadings. Close with a call-to-action: "Trau dich, ${cityData.name}s Single-Welt zu entdecken!". Do not write a concluding paragraph. Do not return the title.`
     }
   ];
 
