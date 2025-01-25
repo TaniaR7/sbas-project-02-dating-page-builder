@@ -94,7 +94,7 @@ export async function generateCityContent(cityData: CityData, citySlug: string, 
     },
     {
       title: `Singles in ${cityData.name}`,
-      prompt: `Provide information about the single population in ${cityData.name}, including demographics, age distribution, and interesting statistics about singles in the city. Be concise. Do not write a concluding paragraph. Do not return the title.`
+      prompt: `Provide information about the single population in ${cityData.name}, including demographics, age distribution, and interesting statistics about singles in the city. Be concise. Do not write a concluding paragraph. Do not return the title. Do not return the SEO-optimized introductory text.`
     },
     {
       title: `Veranstaltungen und Netzwerke für Singles in ${cityData.name}`,
