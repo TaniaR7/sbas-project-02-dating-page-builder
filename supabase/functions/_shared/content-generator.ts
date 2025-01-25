@@ -24,7 +24,7 @@ async function generateSectionContent(section: { title: string, prompt: string }
         messages: [
           { 
             role: "system", 
-            content: "You are a helpful dating assistant that generates SEO optimized content for dating websites in German language. Always use markdown formatting for better readability. Use short paragraphs with a maximum of 120 words per paragraph. Use the informal 'du'. If you use headings do not format them as h1 or h2, but h2, h4, h5, h6 where necessary." 
+            content: "You are a helpful dating assistant that generates SEO optimized content for dating websites in German language. Always use markdown formatting for better readability. Use short paragraphs with a maximum of 120 words per paragraph. Use the informal 'du'. If you use headings do not format them as h1 or h2, but h3, h4, h5, h6 where necessary." 
           },
           { role: "user", content: section.prompt }
         ],
@@ -94,7 +94,7 @@ export async function generateCityContent(cityData: CityData, citySlug: string, 
     },
     {
       title: `Singles in ${cityData.name}`,
-      prompt: `Provide information about the single population in ${cityData.name}, including demographics, age distribution, and interesting statistics about singles in the city. Be concise and use subheadings. Do not write a concluding paragraph. Do not return the title or the first heading.`
+      prompt: `Provide information about the single population in ${cityData.name}, including demographics, age distribution, and interesting statistics about singles in the city. Be concise and use h3 subheadings. Do not write a concluding paragraph. Do not return the title or the first heading.`
     },
     {
       title: `Veranstaltungen und Netzwerke für Singles in ${cityData.name}`,
