@@ -169,7 +169,6 @@ const CityTemplate = () => {
             <h2 className="text-3xl font-bold mb-8">Online-Dating in {data.cityName}</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               {data.datingSites?.map((site) => {
-                // Split description into sentences and take exactly three
                 const sentences = site.description
                   .split('. ')
                   .filter(Boolean)
@@ -180,15 +179,20 @@ const CityTemplate = () => {
                   <Card 
                     key={site.name} 
                     className="relative overflow-hidden group hover:shadow-xl transition-shadow duration-300"
-                    style={{
-                      minHeight: '300px',
-                      backgroundImage: `linear-gradient(rgba(209, 0, 20, 0.7), rgba(209, 0, 20, 0.7)), url(${site.image})`,
-                      backgroundSize: 'cover',
-                      backgroundPosition: 'center',
-                      backgroundRepeat: 'no-repeat'
-                    }}
                   >
-                    <div className="p-6 text-white">
+                    <div 
+                      className="absolute inset-0 w-full h-full"
+                      style={{
+                        backgroundImage: `linear-gradient(rgba(209, 0, 20, 0.7), rgba(209, 0, 20, 0.7)), url(${site.image})`,
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                        backgroundRepeat: 'no-repeat',
+                        WebkitBackgroundSize: 'cover',
+                        MozBackgroundSize: 'cover',
+                        OBackgroundSize: 'cover'
+                      }}
+                    />
+                    <div className="relative p-6 text-white" style={{ minHeight: '300px' }}>
                       <h3 className="text-2xl font-semibold mb-4">{site.name}</h3>
                       <ul className="list-disc list-inside space-y-2 text-gray-200 mb-6">
                         {sentences.map((bullet, index) => (
