@@ -40,23 +40,12 @@ async function generateSectionContent(section: { title: string, prompt: string }
     const gptData = await gptResponse.json();
     let markdownContent = gptData.choices?.[0]?.message?.content || "No content generated";
     const styles = getStyles();
-    
-    // If this is section 2 and we have an image, embed it in the content
-    if (section.title.includes("Eine Stadt für Lebensfreude") && images?.[1]) {
-      const imageHtml = `<img src="${images[1]}" alt="Leben in ${cityName}" style="float: right; margin-left: 20px; margin-bottom: 20px; max-width: 200px; height: auto;" class="rounded-lg shadow-lg" />`;
-      markdownContent = imageHtml + "\n\n" + markdownContent;
-    }
 
     let htmlContent = marked(markdownContent, { 
       gfm: true, 
       breaks: true,
       sanitize: true 
     });
-
-    // Add clear:both to the last paragraph to prevent overlap
-    if (section.title.includes("Eine Stadt für Lebensfreude")) {
-      htmlContent = htmlContent.replace(/<\/p>$/, ' style="clear: both;"></p>');
-    }
 
     Object.entries(styles).forEach(([tag, style]) => {
       const regex = new RegExp(`<${tag}([^>]*)>`, 'g');
@@ -114,7 +103,7 @@ export async function generateCityContent(cityData: CityData, citySlug: string, 
   console.log("Generated images:", images);
 
   const generatedSections = await Promise.all(
-    sections.map(section => generateSectionContent(section, cityData.name, images))
+    sections.map(section => generateSectionContent(section, cityData.name))
   );
 
   return {
