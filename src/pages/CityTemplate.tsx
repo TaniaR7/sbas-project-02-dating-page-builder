@@ -168,38 +168,48 @@ const CityTemplate = () => {
           <section className="mb-16">
             <h2 className="text-3xl font-bold mb-8">Online-Dating in {data.cityName}</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {data.datingSites?.map((site) => (
-                <Card 
-                  key={site.name} 
-                  className="relative overflow-hidden group hover:shadow-xl transition-shadow duration-300"
-                  style={{
-                    minHeight: '300px',
-                    backgroundImage: `linear-gradient(rgba(209, 0, 20, 0.7), rgba(209, 0, 20, 0.7)), url(${site.image})`,
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center'
-                  }}
-                >
-                  <div className="p-6 text-white">
-                    <h3 className="text-2xl font-semibold mb-4">{site.name}</h3>
-                    <ul className="list-disc list-inside space-y-2 text-gray-200 mb-6">
-                      {site.description.split('. ').slice(0, 3).map((bullet, index) => (
-                        bullet && <li key={index} className="line-clamp-2">{bullet}</li>
-                      ))}
-                    </ul>
-                    <div className="absolute bottom-6 left-6 right-6">
-                      <Button 
-                        asChild 
-                        variant="secondary" 
-                        className="w-full bg-white hover:bg-primary hover:text-white text-primary font-semibold transition-colors duration-300"
-                      >
-                        <a href={site.link} target="_blank" rel="noopener noreferrer">
-                          Kostenlos testen
-                        </a>
-                      </Button>
+              {data.datingSites?.map((site) => {
+                // Split description into sentences and take exactly three
+                const sentences = site.description
+                  .split('. ')
+                  .filter(Boolean)
+                  .slice(0, 3)
+                  .map(sentence => sentence.trim() + (sentence.endsWith('.') ? '' : '.'));
+
+                return (
+                  <Card 
+                    key={site.name} 
+                    className="relative overflow-hidden group hover:shadow-xl transition-shadow duration-300"
+                    style={{
+                      minHeight: '300px',
+                      backgroundImage: `linear-gradient(rgba(209, 0, 20, 0.7), rgba(209, 0, 20, 0.7)), url(${site.image})`,
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center',
+                      backgroundRepeat: 'no-repeat'
+                    }}
+                  >
+                    <div className="p-6 text-white">
+                      <h3 className="text-2xl font-semibold mb-4">{site.name}</h3>
+                      <ul className="list-disc list-inside space-y-2 text-gray-200 mb-6">
+                        {sentences.map((bullet, index) => (
+                          <li key={index} className="line-clamp-2">{bullet}</li>
+                        ))}
+                      </ul>
+                      <div className="absolute bottom-6 left-6 right-6">
+                        <Button 
+                          asChild 
+                          variant="secondary" 
+                          className="w-full bg-white hover:bg-primary hover:text-white text-primary font-semibold transition-colors duration-300"
+                        >
+                          <a href={site.link} target="_blank" rel="noopener noreferrer">
+                            Kostenlos testen
+                          </a>
+                        </Button>
+                      </div>
                     </div>
-                  </div>
-                </Card>
-              ))}
+                  </Card>
+                );
+              })}
             </div>
           </section>
 
