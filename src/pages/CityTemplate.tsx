@@ -173,19 +173,25 @@ const CityTemplate = () => {
                   key={site.name} 
                   className="relative overflow-hidden group hover:shadow-xl transition-shadow duration-300"
                   style={{
-                    minHeight: '400px',
-                    backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), url(${site.image})`,
+                    minHeight: '300px',
+                    backgroundImage: `linear-gradient(rgba(209, 0, 20, 0.7), rgba(209, 0, 20, 0.7)), url(${site.image})`,
                     backgroundSize: 'cover',
                     backgroundPosition: 'center'
                   }}
                 >
                   <div className="p-6 text-white">
                     <h3 className="text-2xl font-semibold mb-4">{site.name}</h3>
-                    <p className="text-gray-200 mb-6 line-clamp-4 group-hover:line-clamp-none transition-all duration-300">
-                      {site.description}
-                    </p>
+                    <ul className="list-disc list-inside space-y-2 text-gray-200 mb-6">
+                      {site.description.split('. ').slice(0, 3).map((bullet, index) => (
+                        bullet && <li key={index} className="line-clamp-2">{bullet}</li>
+                      ))}
+                    </ul>
                     <div className="absolute bottom-6 left-6 right-6">
-                      <Button asChild variant="secondary" className="w-full bg-white hover:bg-gray-100 text-primary font-semibold">
+                      <Button 
+                        asChild 
+                        variant="secondary" 
+                        className="w-full bg-white hover:bg-primary hover:text-white text-primary font-semibold transition-colors duration-300"
+                      >
                         <a href={site.link} target="_blank" rel="noopener noreferrer">
                           Kostenlos testen
                         </a>
