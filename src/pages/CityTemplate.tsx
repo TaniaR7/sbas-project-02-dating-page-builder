@@ -167,16 +167,31 @@ const CityTemplate = () => {
           {/* Dating Sites Section */}
           <section className="mb-16">
             <h2 className="text-3xl font-bold mb-8">Online-Dating in {data.cityName}</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               {data.datingSites?.map((site) => (
-                <Card key={site.name} className="p-6 hover:shadow-lg transition-shadow">
-                  <h3 className="text-xl font-semibold mb-3">{site.name}</h3>
-                  <p className="text-gray-600 mb-4">{site.description}</p>
-                  <Button asChild variant="default" className="w-full">
-                    <a href={site.link} target="_blank" rel="noopener noreferrer">
-                      Kostenlos testen
-                    </a>
-                  </Button>
+                <Card 
+                  key={site.name} 
+                  className="relative overflow-hidden group hover:shadow-xl transition-shadow duration-300"
+                  style={{
+                    minHeight: '400px',
+                    backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), url(${site.image})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center'
+                  }}
+                >
+                  <div className="p-6 text-white">
+                    <h3 className="text-2xl font-semibold mb-4">{site.name}</h3>
+                    <p className="text-gray-200 mb-6 line-clamp-4 group-hover:line-clamp-none transition-all duration-300">
+                      {site.description}
+                    </p>
+                    <div className="absolute bottom-6 left-6 right-6">
+                      <Button asChild variant="secondary" className="w-full bg-white hover:bg-gray-100 text-primary font-semibold">
+                        <a href={site.link} target="_blank" rel="noopener noreferrer">
+                          Kostenlos testen
+                        </a>
+                      </Button>
+                    </div>
+                  </div>
                 </Card>
               ))}
             </div>

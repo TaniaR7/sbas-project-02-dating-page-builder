@@ -10,7 +10,66 @@ const getStyles = () => ({
   li: "mb-2",
 });
 
-async function generateSectionContent(section: { title: string, prompt: string }, cityName: string, images?: string[]): Promise<Section> {
+const DATING_PLATFORMS = [
+  {
+    name: "Parship",
+    description: "Die Partnerbörse für anspruchsvolle Singles. Eine der führenden Partnervermittlungen. Eine der größten Mitgliederdatenbanken. Hohe Erfolgsquote durch bewährtes Matching. Hoher Anteil an Akademikern. Geeignet für berufstätige Singles mit wenig Zeit. Sehr guter Kundenservice.",
+    link: "https://singleboersen-aktuell.de/go/target.php?v=parship&utm_campaign=regional&utm_term=",
+    image: "https://iuzpyosdcwmmliyuvavv.supabase.co/storage/v1/object/sign/singleboersen_images/Parship.jpg?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1cmwiOiJzaW5nbGVib2Vyc2VuX2ltYWdlcy9QYXJzaGlwLmpwZyIsImlhdCI6MTczNzg5MTAwNiwiZXhwIjoyMDUzMjUxMDA2fQ.oAI2aEwuOjL1EJm_vp-7zHeTo80A1GrMbe3tVigjYs8"
+  },
+  {
+    name: "ElitePartner",
+    description: "Für Akademiker und Singles mit Niveau. Eine der führenden Partnervermittlungen. Hoher Anteil an Akademikern. Hohe Erfolgsquote von 42 % mit wissenschaftlichem Matching. Geeignet für berufstätige Singles mit Niveau.",
+    link: "https://singleboersen-aktuell.de/go/target.php?v=elitepartner&utm_campaign=regional&utm_term=",
+    image: "https://iuzpyosdcwmmliyuvavv.supabase.co/storage/v1/object/public/singleboersen_images/ElitePartner.jpg"
+  },
+  {
+    name: "LemonSwan",
+    description: "Aktuellstes, wissenschaftlich fundiertes Matching. Hoher Anteil an Akademikern. Geeignet für berufstätige Singles, die in einer gesicherten Umgebung nach einem Partner suchen möchten. Alle Profile werden von Hand geprüft. Kostenlose Premium-Mitgliedschaft für Alleinerziehende und Studenten.",
+    link: "https://singleboersen-aktuell.de/go/target.php?v=lemonswan&utm_campaign=regional&utm_term=",
+    image: "https://iuzpyosdcwmmliyuvavv.supabase.co/storage/v1/object/public/singleboersen_images/Lemonswan.jpg"
+  },
+  {
+    name: "LoveScout24",
+    description: "Beste Singlebörse im Test. Eines der größten Datingportale. Vielseitige Kennenlernmöglichkeiten. Guter Support. Single-Events für Mitglieder.",
+    link: "https://singleboersen-aktuell.de/link/targets.php?v=lovescouteo&utm_campaign=regional&utm_term=",
+    image: "https://iuzpyosdcwmmliyuvavv.supabase.co/storage/v1/object/public/singleboersen_images/lovescout.jpg"
+  },
+  {
+    name: "NEU.DE",
+    description: "Guter Kundenservice. Eisbrecher-Fragen zur schnellen Kontaktaufnahme. NEU: Kostenlos auf Nachrichten von PLUS-Mitgliedern antworten.",
+    link: "https://singleboersen-aktuell.de/link/targets.php?v=neu_de&utm_campaign=regional&utm_term=",
+    image: "https://iuzpyosdcwmmliyuvavv.supabase.co/storage/v1/object/public/singleboersen_images/neu_de.jpg"
+  },
+  {
+    name: "iDates",
+    description: "Großes Flirtportal mit viel Aktivität. Einfache Bedienbarkeit für leichtes Flirten. Gutes Preis-/Leistungsverhältnis. Rund 500.000 Mitglieder.",
+    link: "https://singleboersen-aktuell.de/go/target.php?v=idates&utm_campaign=regional&utm_term=",
+    image: "https://iuzpyosdcwmmliyuvavv.supabase.co/storage/v1/object/sign/singleboersen_images/idates.jpg?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1cmwiOiJzaW5nbGVib2Vyc2VuX2ltYWdlcy9pZGF0ZXMuanBnIiwiaWF0IjoxNzM3ODg5NzA2LCJleHAiOjIwNTMyNDk3MDZ9.kHWnL-eds5udLB6wFMiI_sJ9CyB4wgwj7dm_vC0WoRM"
+  }
+];
+
+function getRandomDatingSites(cityName: string, count: number = 2) {
+  // Create a copy of the array to avoid modifying the original
+  const platforms = [...DATING_PLATFORMS];
+  const selected = [];
+  
+  // Randomly select 'count' number of platforms
+  for (let i = 0; i < count && platforms.length > 0; i++) {
+    const randomIndex = Math.floor(Math.random() * platforms.length);
+    const platform = platforms.splice(randomIndex, 1)[0];
+    // Replace [Stadt] with actual city name and update the link
+    selected.push({
+      ...platform,
+      description: platform.description.replace('[Stadt]', cityName),
+      link: platform.link + encodeURIComponent(cityName)
+    });
+  }
+  
+  return selected;
+}
+
+async function generateSectionContent(section: { title: string, prompt: string }, cityName: string): Promise<Section> {
   console.log(`Generating content for section: ${section.title}`);
   try {
     const gptResponse = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -106,6 +165,9 @@ export async function generateCityContent(cityData: CityData, citySlug: string, 
     sections.map(section => generateSectionContent(section, cityData.name))
   );
 
+  // Get two random dating platforms
+  const datingSites = getRandomDatingSites(cityData.name);
+
   return {
     cityName: cityData.name,
     bundesland: cityData.bundesland,
@@ -114,17 +176,6 @@ export async function generateCityContent(cityData: CityData, citySlug: string, 
     introduction: generatedSections[0].content,
     images: images,
     sections: generatedSections.slice(1),
-    datingSites: [
-      {
-        name: "Parship",
-        description: "Eine der führenden Partnervermittlungen",
-        link: "https://singleboersen-aktuell.de/go/target.php?v=parship"
-      },
-      {
-        name: "ElitePartner",
-        description: "Hoher Anteil an Akademikern",
-        link: "https://singleboersen-aktuell.de/go/target.php?v=elitepartner"
-      }
-    ]
+    datingSites: datingSites
   };
 }
