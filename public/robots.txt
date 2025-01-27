@@ -1,5 +1,4 @@
 User-agent: *
 Allow: /
 
-# Sitemap
-Sitemap: https://lokal.singleboersen-aktuell.de/sitemap.xml
+Sitemap: https://regional.singleboersen-aktuell.de/sitemap.xml

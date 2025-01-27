@@ -13,6 +13,8 @@ Deno.serve(async (req) => {
   }
 
   try {
+    console.log('Starting sitemap generation...');
+    
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -28,6 +30,8 @@ Deno.serve(async (req) => {
       console.error('Error fetching cities:', error);
       throw error;
     }
+
+    console.log(`Found ${cities?.length || 0} cities`);
 
     const currentDate = format(new Date(), 'yyyy-MM-dd');
     const baseUrl = 'https://regional.singleboersen-aktuell.de';
@@ -55,6 +59,8 @@ Deno.serve(async (req) => {
 
     // Close the urlset tag
     sitemap += '\n</urlset>';
+
+    console.log('Sitemap generation completed successfully');
 
     // Return the XML with appropriate headers
     const headers = {

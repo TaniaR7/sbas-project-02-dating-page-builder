@@ -1,9 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <!-- This file will be dynamically replaced by the sitemap from our Edge Function -->
   <url>
     <loc>https://regional.singleboersen-aktuell.de</loc>
-    <lastmod>2024-03-27</lastmod>
+    <lastmod>2024-01-27</lastmod>
     <changefreq>monthly</changefreq>
     <priority>1.0</priority>
   </url>
