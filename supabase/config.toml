@@ -1,4 +1,4 @@
 project_id = "iuzpyosdcwmmliyuvavv"
 
-[functions.get-city-data]
+[functions.sitemap]
 verify_jwt = false
