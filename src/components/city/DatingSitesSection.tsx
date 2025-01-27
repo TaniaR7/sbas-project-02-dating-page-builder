@@ -16,6 +16,7 @@ export const DatingSitesSection = ({ cityName, datingSites }: DatingSitesSection
   return (
     <section className="mb-16">
       <h2 className="text-3xl font-bold mb-8">Online-Dating in {cityName}</h2>
+      <p className="text-lg mb-6">Die beliebtesten Plattformen für die Partnersuche unter Singles in {cityName} sind:</p>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {datingSites?.map((site) => (
           <DatingSiteCard
