@@ -83,7 +83,7 @@ async function generateSectionContent(section: { title: string, prompt: string }
         messages: [
           { 
             role: "system", 
-            content: "You are a helpful dating assistant that generates SEO optimized content for dating websites in German language. Always use markdown formatting for better readability. Use short paragraphs with a maximum of 120 words per paragraph. Use the informal 'du'. If you use headings do not format them as h1 or h2, but h3, h4, h5, h6 where necessary." 
+            content: "You are a helpful dating assistant that generates SEO optimized content for dating websites in German language. Always use markdown formatting for better readability. Use short paragraphs with a maximum of 120 words per paragraph. Answer in a friendly way and use the informal 'du'. Ensure, that your output is less than 400 tokens or less if specified explicitly in the prompt. If you use headings do not format them as h1 or h2, but h3, h4, h5, h6 where necessary." 
           },
           { role: "user", content: section.prompt }
         ],
@@ -130,11 +130,11 @@ export async function generateCityContent(cityData: CityData, citySlug: string, 
   const sections = [
     {
       title: `${cityData.name} – Die Stadt der Singles`,
-      prompt: `Write a welcoming introduction about singles in ${cityData.name}, focusing on the city's appeal for singles and dating. Include why ${cityData.name} is an exciting place for singles. The output should be approximately 150 tokens. Do not use subheadings. Do not write a concluding paragraph. Do not return the title.`
+      prompt: `Write a welcoming introduction about singles in ${cityData.name}, focusing on the city's appeal for singles and dating. Include why ${cityData.name} is an exciting place for singles. The output should be less than 150 tokens. Do not use subheadings. Do not write a concluding paragraph. Do not return the title.`
     },
     {
       title: `${cityData.name}: Eine Stadt für Lebensfreude und Begegnungen`,
-       prompt: `Describe ${cityData.name}'s unique characteristics, culture, and lifestyle that make it attractive for singles. Include specific details about the city's atmosphere and what makes it special for dating. The output should be apporxiamtely 500 tokens. Use a maximum of 4 subheadings. Do not write a concluding paragraph. Do not return the title.`
+       prompt: `Describe ${cityData.name}'s unique characteristics, culture, and lifestyle that make it attractive for singles. Include specific details about the city's atmosphere and what makes it special for dating. The output should be less than 500 tokens. Use a maximum of 4 subheadings. Do not write a concluding paragraph. Do not return the title.`
     },
     {
       title: `Die besten Orte, um andere Singles zu treffen`,
@@ -146,7 +146,7 @@ export async function generateCityContent(cityData: CityData, citySlug: string, 
     },
     {
       title: `Veranstaltungen und Netzwerke für Singles in ${cityData.name}`,
-      prompt: `Detail the various events, meetups, and networking opportunities available for singles in ${cityData.name}. Include specific events and organizations that cater to singles. Do not mention 'online dating'. The output should be maximum 400 tokens. Do not write a concluding paragraph. Do not return the title.`
+      prompt: `Detail the various events, meetups, and networking opportunities available for singles in ${cityData.name}. Include specific events and organizations that cater to singles. Do not mention 'online dating'. The output should be less than 400 tokens. Do not write a concluding paragraph. Do not return the title.`
     },
     {
       title: `Tipps für erfolgreiches Dating in ${cityData.name}`,
