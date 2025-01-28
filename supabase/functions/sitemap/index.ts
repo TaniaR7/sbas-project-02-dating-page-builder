@@ -47,14 +47,16 @@ Deno.serve(async (req) => {
   </url>`;
 
     // Add an entry for each city
-    for (const city of cities) {
-      sitemap += `
+    if (cities) {
+      for (const city of cities) {
+        sitemap += `
   <url>
     <loc>${baseUrl}/singles/${city.slug}</loc>
     <lastmod>${currentDate}</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>`;
+      }
     }
 
     // Close the urlset tag
