@@ -20,11 +20,12 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    console.log('Fetching cities from database...');
+
     // Fetch all cities from the database
     const { data: cities, error } = await supabase
       .from('cities')
-      .select('slug')
-      .order('name');
+      .select('slug');
 
     if (error) {
       console.error('Error fetching cities:', error);
@@ -47,8 +48,10 @@ Deno.serve(async (req) => {
   </url>`;
 
     // Add an entry for each city
-    if (cities) {
+    if (cities && cities.length > 0) {
+      console.log('Adding city entries to sitemap...');
       for (const city of cities) {
+        console.log(`Adding entry for city: ${city.slug}`);
         sitemap += `
   <url>
     <loc>${baseUrl}/singles/${city.slug}</loc>
@@ -57,6 +60,8 @@ Deno.serve(async (req) => {
     <priority>0.8</priority>
   </url>`;
       }
+    } else {
+      console.log('No cities found in database');
     }
 
     // Close the urlset tag
