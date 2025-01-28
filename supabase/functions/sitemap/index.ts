@@ -22,22 +22,28 @@ Deno.serve(async (req) => {
 
     console.log('Fetching cities from database...');
 
-    // Fetch all cities from the database
+    // Fetch all cities from the database with explicit error handling
     const { data: cities, error } = await supabase
       .from('cities')
-      .select('slug');
+      .select('slug')
+      .order('slug');
 
     if (error) {
       console.error('Error fetching cities:', error);
-      throw error;
+      throw new Error(`Failed to fetch cities: ${error.message}`);
     }
 
-    console.log(`Found ${cities?.length || 0} cities`);
+    if (!cities) {
+      console.error('No cities data returned from database');
+      throw new Error('No cities data returned from database');
+    }
+
+    console.log(`Found ${cities.length} cities in database`);
 
     const currentDate = format(new Date(), 'yyyy-MM-dd');
     const baseUrl = 'https://regional.singleboersen-aktuell.de';
 
-    // Start building the XML sitemap
+    // Start building the XML sitemap with proper XML declaration and namespace
     let sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
@@ -48,20 +54,21 @@ Deno.serve(async (req) => {
   </url>`;
 
     // Add an entry for each city
-    if (cities && cities.length > 0) {
-      console.log('Adding city entries to sitemap...');
-      for (const city of cities) {
-        console.log(`Adding entry for city: ${city.slug}`);
-        sitemap += `
+    console.log('Adding city entries to sitemap...');
+    for (const city of cities) {
+      if (!city.slug) {
+        console.warn('Found city without slug, skipping');
+        continue;
+      }
+
+      console.log(`Adding entry for city: ${city.slug}`);
+      sitemap += `
   <url>
     <loc>${baseUrl}/singles/${city.slug}</loc>
     <lastmod>${currentDate}</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>`;
-      }
-    } else {
-      console.log('No cities found in database');
     }
 
     // Close the urlset tag
@@ -79,9 +86,15 @@ Deno.serve(async (req) => {
     return new Response(sitemap, { headers });
   } catch (error) {
     console.error('Error generating sitemap:', error);
-    return new Response(JSON.stringify({ error: 'Error generating sitemap' }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 500,
-    });
+    return new Response(
+      JSON.stringify({ 
+        error: 'Error generating sitemap', 
+        details: error instanceof Error ? error.message : 'Unknown error' 
+      }), 
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500,
+      }
+    );
   }
 });
